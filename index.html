@@ -1127,7 +1127,7 @@
                                 <div style="font-size: 13px; color: #64748b;">(0312钢铁、铝—简版信息收集问答表(瑞欧定制).xlsm)</div>
                             </div>
                         </div>
-                        <a href="javascript:alert('业务员：此按钮需外链到你们公司的云盘/文件服务器上的实际文件');" class="download-btn">点击下载</a>
+                        <a href="javascript:showAlert('业务员：此按钮需外链到你们公司的云盘/文件服务器上的实际文件');" class="download-btn">点击下载</a>
                     </div>
 
                     <p class="help-text" style="text-align: right; margin-bottom: 20px;">
@@ -1174,6 +1174,8 @@
 
         let factoryCounter = 1;
         let activeTab = 'manual';
+
+        function showAlert(msg) { const toast = document.createElement('div'); toast.style.position = 'fixed'; toast.style.top = '20px'; toast.style.left = '50%'; toast.style.transform = 'translateX(-50%)'; toast.style.background = '#ef4444'; toast.style.color = '#fff'; toast.style.padding = '12px 24px'; toast.style.borderRadius = '8px'; toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; toast.style.zIndex = '9999'; toast.style.fontSize = '15px'; toast.style.fontWeight = 'bold'; toast.innerText = msg; document.body.appendChild(toast); setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.5s ease'; setTimeout(() => toast.remove(), 500); }, 3000); }
 
         // XSS 防护转义函数
         function escapeHTML(str) {
@@ -1328,11 +1330,11 @@
                             const company = document.getElementById('salesCompanyName').value.trim();
                             const phone = document.getElementById('salesPhone').value.trim();
                             if (!sales || !company) {
-                                alert("请完整填写业务员姓名和客户企业名称！");
+                                showAlert("请完整填写业务员姓名和客户企业名称！");
                             return;
             }
                             if (phone && !/^1\d{10}$/.test(phone)) {
-                                alert("手机号格式不正确，请输入11位手机号！");
+                                showAlert("手机号格式不正确，请输入11位手机号！");
                                 return;
                             }
 
@@ -1341,7 +1343,7 @@
 
                             // 如果是在本地电脑双击打开的，给个提示
                             if (window.location.protocol === 'file:') {
-                                alert("【提示】您当前是在本地直接双击打开的文件作为测试验证。原生的链接会是一长串本地路径（file:///C:/...）。\n\n为了给您演示最终“客户填表视角”的效果，您可以复制下方生成的完整链接，并将其【粘贴到浏览器的新标签页的地址栏中】然后回车，即可体验完整的双视角切换。\n\n注意：这串本地路径链接在别人手机上是打不开的！正式使用时，请让贵司研发将这个系统文件部署到真实的服务器域名下。");
+                                showAlert("【提示】您当前是在本地直接双击打开的文件作为测试验证。原生的链接会是一长串本地路径（file:///C:/...）。\n\n为了给您演示最终“客户填表视角”的效果，您可以复制下方生成的完整链接，并将其【粘贴到浏览器的新标签页的地址栏中】然后回车，即可体验完整的双视角切换。\n\n注意：这串本地路径链接在别人手机上是打不开的！正式使用时，请让贵司研发将这个系统文件部署到真实的服务器域名下。");
             }
 
                             const phoneParam = phone ? "&phone=" + encodeURIComponent(phone) : "";
@@ -1360,7 +1362,7 @@
                             copyText.setSelectionRange(0, 99999);
                             try {
                                 document.execCommand("copy");
-                            alert("✅ 文案及链接已成功复制！请直接在微信中粘贴发送给客户。");
+                            showAlert("✅ 文案及链接已成功复制！请直接在微信中粘贴发送给客户。");
             } catch (err) {
                                 console.log('复制失败');
             }
@@ -1522,22 +1524,7 @@
 
                                             // 注意：contractFile 元素已移除，此处不再绑定事件监听器
 
-                                            // 监听文件上传改变名称展示
-                                            document.getElementById('fileA').addEventListener('change', function (e) {
-            if (e.target.files.length > 0) {
-                                                document.getElementById('fileNameA').textContent = '已选择: ' + e.target.files[0].name;
-                                            document.getElementById('fileNameA').style.color = 'var(--secondary-color)';
-                                            document.getElementById('fileNameA').style.fontWeight = 'bold';
-            }
-        });
-
-                                            document.getElementById('fileB').addEventListener('change', function (e) {
-            if (e.target.files.length > 0) {
-                                                document.getElementById('fileNameB').textContent = '已选择: ' + e.target.files[0].name;
-                                            document.getElementById('fileNameB').style.color = 'var(--secondary-color)';
-                                            document.getElementById('fileNameB').style.fontWeight = 'bold';
-            }
-        });
+                                            // (原生且无意义的全局绑定 fileA/fileB 监听已移除，因为 fileA, fileB 后续有独立的行内 onchange 替代)
 
                                             // 存储判定的路径结果
                                             let finalPath = "";
@@ -1627,24 +1614,24 @@
             if (step === 2) {
                 if (!isRecovering) {
                     if (!document.getElementById('companyName').value) {
-                                                alert('请输入企业名称！');
+                                                showAlert('请输入企业名称！');
                                             return;
                     }
 
                                             if (activeTab === 'manual') {
                         const factoryNodes = document.querySelectorAll('.product-cn-code');
                                             if (factoryNodes.length === 0) {
-                                                alert('请至少添加一个工厂和一个产品！');
+                                                showAlert('请至少添加一个工厂和一个产品！');
                                             return;
                         }
                                             const firstCode = factoryNodes[0].value;
                                             if (!firstCode) {
-                                                alert('当前工厂未填写产品 CN Code，请补充！');
+                                                showAlert('当前工厂未填写产品 CN Code，请补充！');
                                             return;
                         }
                     } else {
                         if (document.getElementById('cnCodeFile').files.length === 0) {
-                                                alert('请先上传包含工厂与海关编码清单的Excel文件！');
+                                                showAlert('请先上传包含工厂与海关编码清单的Excel文件！');
                                             return;
                         }
                     }
@@ -1653,17 +1640,17 @@
                                             const motivElem = document.querySelector('input[name="motivation"]:checked');
 
                                             if (!processElem) {
-                                                alert('请选择生产工艺类型！');
+                                                showAlert('请选择生产工艺类型！');
                                             return;
                     }
 
                                             if (processElem.value === 'short' && !document.querySelector('input[name="traceSupplier"]:checked')) {
-                                                alert('对于短流程工艺，请勾选是否能追溯供应商数据！');
+                                                showAlert('对于短流程工艺，请勾选是否能追溯供应商数据！');
                                             return;
                     }
 
                                             if (!motivElem) {
-                                                alert('请选择核心驱动力！');
+                                                showAlert('请选择核心驱动力！');
                                             return;
                     }
                 }
@@ -1979,7 +1966,7 @@
 
                                                                         if (error) {
                                                                             console.error('Supabase 写入失败:', error);
-                                                                        alert('数据保存出现问题，但您的报价已记录在本地。请联系业务员确认。\n错误信息: ' + error.message);
+                                                                        showAlert('数据保存出现问题，但您的报价已记录在本地。请联系业务员确认。\n错误信息: ' + error.message);
                 } else {
                                                                             console.log('✅ 数据已成功保存到 Supabase 云端数据库！', data);
                                                                         // 同步推送到钉钉通知（让业务员实时收到提醒）
