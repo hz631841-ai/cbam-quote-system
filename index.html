@@ -6,8 +6,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>欧盟CBAM隐含碳排放核算报价系统</title>
-    <!-- 引入 Supabase JS SDK（用于云端数据持久化） -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 引入 Supabase JS SDK（用于云端数据持久化，使用unpkg备用CDN） -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // CDN 加载失败时的备用方案
+        if (typeof supabase === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');
+        }
+    </script>
     <style>
         :root {
             --primary-color: #0f172a;
@@ -1871,10 +1877,14 @@
                     alert('数据保存出现问题，但您的报价已记录在本地。请联系业务员确认。\n错误信息: ' + error.message);
                 } else {
                     console.log('✅ 数据已成功保存到 Supabase 云端数据库！', data);
+                    // 同步推送到钉钉通知（让业务员实时收到提醒）
+                    syncToDingTalk(formData);
                 }
             } catch (e) {
                 console.error('网络异常，无法连接到云端数据库:', e);
                 // 即使网络异常也不阻塞用户流程，数据在localStorage中已有备份
+                // 尝试直接通过钉钉推送
+                syncToDingTalk(formData);
             }
 
             // 切换到成功界面
@@ -1903,6 +1913,43 @@
                 el.classList.add('completed');
                 el.classList.remove('active');
             });
+        }
+
+        // ============ 钉钉数据同步（通过Webhook推送通知） ============
+        async function syncToDingTalk(formData) {
+            try {
+                // 构建钉钉消息内容
+                const msgContent = [
+                    `📋 **CBAM提资分流 - 新客户线索**`,
+                    ``,
+                    `🧑‍💼 业务员：${formData.sales_name}`,
+                    `🏢 客户企业：${formData.company_name}`,
+                    `📌 匹配方案：${formData.matched_path}`,
+                    `💰 预估报价：${formData.quote_total}`,
+                    `📝 签约状态：${formData.submit_type}`,
+                    `🔢 项目编号：${formData.ref_number}`,
+                    `📦 交付物：${formData.deliverables || '未选择'}`,
+                    `⏰ 提交时间：${new Date().toLocaleString('zh-CN')}`,
+                    ``,
+                    `🔗 [查看完整数据表](https://alidocs.dingtalk.com/i/nodes/bva6QBXJwav5yvPNFQNXgoXMWn4qY5Pr)`,
+                ].join('\n');
+
+                // 注：实际使用时需要配置钉钉群机器人的Webhook URL
+                // 当前将数据输出到控制台，实际部署时替换为钉钉Webhook地址
+                console.log('📨 钉钉推送数据:', msgContent);
+                console.log('💡 提示: 如需启用钉钉机器人推送，请在此处配置Webhook URL');
+                
+                // 将数据暂存到 localStorage 备份
+                const existingData = JSON.parse(localStorage.getItem('cbam_submissions_backup') || '[]');
+                existingData.push({
+                    ...formData,
+                    local_timestamp: new Date().toISOString()
+                });
+                localStorage.setItem('cbam_submissions_backup', JSON.stringify(existingData));
+                console.log('💾 数据已备份到本地 localStorage');
+            } catch (e) {
+                console.error('钉钉同步异常:', e);
+            }
         }
     </script>
 </body>
