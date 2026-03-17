@@ -1,1 +1,2245 @@
-placeholder
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- Supabase 浜戠��鏁版嵁鎸佷箙鍖栭泦鎴愮増 -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>娆х洘CBAM闅愬惈纰虫帓鏀炬牳绠楁姤浠风郴缁�</title>
+    <!-- 寮曞叆 Supabase JS SDK锛堢敤浜庝簯绔�鏁版嵁鎸佷箙鍖栵紝浣跨敤unpkg澶囩敤CDN锛� -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // CDN 鍔犺浇澶辫触鏃剁殑澶囩敤鏂规��
+        if (typeof supabase === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');
+        }
+    </script>
+    <style>
+        /* ============================================
+           CBAM 提资分流系统 - UI 样式表
+           设计风格参考：瑞欧科技 REACH24H 官网
+           主色调：品牌绿 #5B9A3C / 辅助深蓝灰 #1e293b
+           ============================================ */
+        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #2d5a27;        /* 深品牌绿 - 标题/重点 */
+            --secondary-color: #5B9A3C;      /* REACH24H 品牌绿 */
+            --accent-color: #7BC144;         /* 亮绿高亮 */
+            --accent-gradient: linear-gradient(135deg, #5B9A3C, #7BC144);
+            --bg-color: #f3f6f1;             /* 浅绿灰背景 */
+            --card-bg: #ffffff;              /* 卡片白底 */
+            --text-primary: #1e293b;         /* 深蓝灰正文 */
+            --text-secondary: #64748b;       /* 中灰辅助文字 */
+            --text-muted: #94a3b8;           /* 浅灰提示 */
+            --border-color: #e2e8f0;         /* 浅灰边框 */
+            --border-light: #f1f5f9;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 16px rgba(45,90,39,0.08);
+            --shadow-lg: 0 8px 32px rgba(45,90,39,0.12);
+            --shadow-hover: 0 8px 24px rgba(91,154,60,0.15);
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --success-color: #5B9A3C;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.7;
+            font-size: 15px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== 顶部品牌标识栏 ===== */
+        .brand-header {
+            background: linear-gradient(135deg, #2d5a27 0%, #3d7a34 50%, #5B9A3C 100%);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            box-shadow: 0 2px 12px rgba(45,90,39,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-header h2 {
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 20px;
+            letter-spacing: 1px;
+        }
+
+        .brand-header div {
+            color: rgba(255,255,255,0.8) !important;
+            font-size: 12px;
+            letter-spacing: 2px;
+        }
+
+        .brand-header img {
+            height: 36px;
+        }
+
+        /* ===== 主容器 ===== */
+        .container {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 32px 20px 60px;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        /* ===== 进度条 ===== */
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 36px;
+            padding: 0 10px;
+            position: relative;
+        }
+
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 40px;
+            right: 40px;
+            height: 3px;
+            background: var(--border-color);
+            border-radius: 2px;
+            z-index: 0;
+        }
+
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            cursor: default;
+        }
+
+        .progress-step .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            background: var(--card-bg);
+            color: var(--text-muted);
+            border: 2.5px solid var(--border-color);
+            transition: var(--transition);
+            margin-bottom: 6px;
+        }
+
+        .progress-step .step-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+            white-space: nowrap;
+            transition: var(--transition);
+        }
+
+        .progress-step.active .step-number {
+            background: var(--accent-gradient);
+            color: #fff;
+            border-color: var(--secondary-color);
+            box-shadow: 0 2px 10px rgba(91,154,60,0.3);
+        }
+
+        .progress-step.active .step-label {
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        .progress-step.completed .step-number {
+            background: var(--secondary-color);
+            color: #fff;
+            border-color: var(--secondary-color);
+        }
+
+        .progress-step.completed .step-label {
+            color: var(--secondary-color);
+        }
+
+        /* ===== 步骤容器（卡片） ===== */
+        .step-container {
+            display: none;
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 36px 32px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(91,154,60,0.06);
+            animation: fadeInUp 0.4s ease;
+        }
+
+        .step-container.active {
+            display: block;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== 表单组件 ===== */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        input[type="text"],
+        input[type="tel"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            color: var(--text-primary);
+            background: #fafcf9;
+            transition: var(--transition);
+            font-family: inherit;
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="tel"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(91,154,60,0.12);
+            background: #ffffff;
+        }
+
+        input[type="text"]::placeholder,
+        input[type="tel"]::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* ===== Radio 选项（卡片式） ===== */
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: flex-start;
+            padding: 14px 18px;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            background: #fafcf9;
+            gap: 12px;
+        }
+
+        .radio-option:hover {
+            border-color: var(--secondary-color);
+            background: rgba(91,154,60,0.04);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .radio-option input[type="radio"] {
+            margin-top: 3px;
+            accent-color: var(--secondary-color);
+            transform: scale(1.15);
+        }
+
+        .radio-option input[type="radio"]:checked ~ div .radio-label {
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        .radio-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .radio-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 3px;
+            line-height: 1.5;
+        }
+
+        /* ===== 按钮 ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 13px 32px;
+            border: none;
+            border-radius: 50px; /* 胶囊型按钮 */
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary,
+        .btn {
+            background: var(--accent-gradient);
+            color: #ffffff;
+            box-shadow: 0 3px 12px rgba(91,154,60,0.25);
+        }
+
+        .btn-primary:hover,
+        .btn:not(.btn-secondary):not(.btn-outline):hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+            filter: brightness(1.05);
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            color: var(--secondary-color);
+            border: 1.5px solid var(--secondary-color);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(91,154,60,0.06);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1.5px solid var(--border-color);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--secondary-color);
+            color: var(--secondary-color);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+            justify-content: flex-end;
+        }
+
+        /* ===== 工厂管理区 ===== */
+        .factory-box {
+            background: #fafcf9;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 14px;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .factory-box:hover {
+            border-color: rgba(91,154,60,0.3);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .factory-title {
+            font-weight: 600 !important;
+            color: var(--primary-color) !important;
+            font-size: 14px;
+        }
+
+        .factory-name {
+            margin-bottom: 12px !important;
+        }
+
+        .delete-factory-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border-color);
+            background: white;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .delete-factory-btn:hover {
+            background: var(--error-color);
+            color: white;
+            border-color: var(--error-color);
+        }
+
+        .add-product-btn {
+            font-size: 13px;
+            color: var(--secondary-color);
+            background: transparent;
+            border: 1.5px dashed rgba(91,154,60,0.4);
+            border-radius: var(--radius-sm);
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+            margin-top: 8px;
+            font-family: inherit;
+        }
+
+        .add-product-btn:hover {
+            background: rgba(91,154,60,0.06);
+            border-color: var(--secondary-color);
+        }
+
+        .product-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .product-cn-code {
+            flex: 1;
+        }
+
+        .cn-status {
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        /* ===== Tab 切换 ===== */
+        .tab-container {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-color);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px 16px;
+            text-align: center;
+            border: none;
+            background: transparent;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .tab.active {
+            background: var(--card-bg);
+            color: var(--secondary-color);
+            font-weight: 600;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ===== 结果展示框 ===== */
+        .result-box {
+            border-radius: var(--radius-md);
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1.5px solid;
+        }
+
+        .result-path-a {
+            background: linear-gradient(135deg, rgba(91,154,60,0.06), rgba(123,193,68,0.04));
+            border-color: rgba(91,154,60,0.2);
+        }
+
+        .result-path-b {
+            background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(59,130,246,0.04));
+            border-color: rgba(37,99,235,0.2);
+        }
+
+        .result-title {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .result-box p {
+            margin-bottom: 10px;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        /* ===== 交付物选择 ===== */
+        .deliverable-group {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(91,154,60,0.03);
+            border-radius: var(--radius-md);
+            border: 1px dashed rgba(91,154,60,0.2);
+        }
+
+        .deliverable-group-title {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+        }
+
+        .deliverable-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            background: white;
+        }
+
+        .deliverable-item:hover {
+            border-color: var(--secondary-color);
+        }
+
+        .deliverable-item.checked {
+            border-color: var(--secondary-color);
+            background: rgba(91,154,60,0.04);
+        }
+
+        .deliverable-item input[type="checkbox"] {
+            accent-color: var(--secondary-color);
+            transform: scale(1.15);
+            margin-top: 2px;
+        }
+
+        /* ===== 帮助文本 ===== */
+        .help-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: block;
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+
+        /* ===== 报价汇总表 ===== */
+        .quote-summary {
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1.5px solid var(--border-color);
+            margin: 20px 0;
+        }
+
+        .quote-summary table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .quote-summary th {
+            background: linear-gradient(135deg, #2d5a27, #3d7a34);
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .quote-summary td {
+            padding: 11px 16px;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 14px;
+        }
+
+        .quote-summary tr:last-child td {
+            border-bottom: none;
+        }
+
+        .quote-summary tr:nth-child(even) {
+            background: #fafcf9;
+        }
+
+        .quote-summary .total-row {
+            background: rgba(91,154,60,0.06) !important;
+            font-weight: 700;
+        }
+
+        .quote-summary .total-row td {
+            color: var(--primary-color);
+            font-size: 16px;
+        }
+
+        /* ===== 文件上传区 ===== */
+        .file-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+            background: #fafcf9;
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--secondary-color);
+            background: rgba(91,154,60,0.03);
+        }
+
+        /* ===== 链接生成区域 ===== */
+        #generatedLinkArea {
+            margin-top: 16px;
+        }
+
+        #generatedLink {
+            width: 100%;
+            min-height: 120px;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fafcf9;
+        }
+
+        /* ===== 滚动条美化 ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(91,154,60,0.2);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(91,154,60,0.4);
+        }
+
+        /* ===== 响应式优化 ===== */
+        @media (max-width: 640px) {
+            .container {
+                padding: 20px 14px 40px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            .step-container {
+                padding: 24px 18px;
+                border-radius: var(--radius-md);
+            }
+            .btn-group {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+            }
+            .progress-bar {
+                padding: 0;
+            }
+            .progress-step .step-label {
+                font-size: 10px;
+            }
+            .progress-step .step-number {
+                width: 30px;
+                height: 30px;
+                font-size: 12px;
+            }
+        }
+
+        /* ===== 动画 ===== */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .loading {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+    </style>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+    <div class="container" id="sales-portal" style="display: none; text-align: center;">
+        <div style="margin-bottom: 20px;">
+            <h2 style="color: var(--secondary-color); font-weight: 800; margin: 0; font-size: 24px;">REACH24H</h2>
+            <div style="font-size: 12px; color: #64748b; letter-spacing: 2px;">鏉�宸炵憺娆х�戞妧鏈夐檺鍏�鍙�</div>
+        </div>
+        <h1>CBAM 鎻愯祫鍒嗘祦绯荤粺 - 涓氬姟鍛樹笓鐢ㄥ彂鍗曞彛</h1>
+        <p class="subtitle" style="margin-bottom: 30px;">璇峰厛濉�鍐欏熀鏈�淇℃伅锛屼负鎮ㄨ礋璐ｇ殑瀹㈡埛鐢熸垚涓撳睘濉�鎶ラ摼鎺ャ��</p>
+
+        <div class="form-group" style="text-align: left;">
+            <label>鎮ㄧ殑濮撳悕 (涓氬姟鍛�)</label>
+            <input type="text" id="salesName" placeholder="璇疯緭鍏ユ偍鐨勫�撳悕" required style="box-shadow: none;">
+        </div>
+
+        <div class="form-group" style="text-align: left;">
+            <label>鎮ㄧ殑鎵嬫満鍙� (鐢ㄤ簬瀹㈡埛鎻愪氦鍚庨拤閽堾鎻愰啋鎮�)</label>
+            <input type="tel" id="salesPhone" placeholder="璇疯緭鍏ユ偍鐨勬墜鏈哄彿" required style="box-shadow: none;" maxlength="11" pattern="[0-9]{11}">
+            <div style="font-size:12px; color:#94a3b8; margin-top:4px;">馃挕 绯荤粺浼氳嚜鍔ㄨ�颁綇鎮ㄧ殑鎵嬫満鍙凤紝涓嬫�℃棤闇�閲嶅�嶈緭鍏�</div>
+        </div>
+
+        <div class="form-group" style="text-align: left;">
+            <label>瀵规柟瀹㈡埛浼佷笟鍚嶇О</label>
+            <input type="text" id="salesCompanyName" placeholder="璇疯緭鍏ュ皢瑕佸彂閫佺粰鐨勫�㈡埛鍏�鍙稿叏绉�" required style="box-shadow: none;">
+        </div>
+
+        <button type="button" class="btn" style="width: 100%; margin-top: 10px;"
+            onclick="generateCustomerLink()">鐢熸垚骞跺�嶅埗涓撳睘閾炬帴</button>
+
+        <div id="generatedLinkArea"
+            style="display: none; margin-top: 30px; text-align: left; padding: 20px; background: #f8fafc; border: 1px dashed var(--secondary-color); border-radius: 8px;">
+            <p style="margin-top: 0; font-weight: bold; color: var(--primary-color);">閾炬帴鐢熸垚鎴愬姛锛佽�风洿鎺ョ矘璐村彂閫佺粰瀹㈡埛寰�淇★細</p>
+            <textarea id="generatedLink" rows="5"
+                style="width: 100%; font-size: 14px; background: white; cursor: text; line-height: 1.5;"
+                readonly></textarea>
+        </div>
+
+        <div style="margin-top:20px; text-align: left; font-size: 13px; color: #64748b;">
+            <p><strong>馃挕 閫昏緫璇存槑锛�</strong>瀹㈡埛鎵撳紑閾炬帴鍚庯紝濉�琛ㄩ�栭〉涓嶅啀闇�瑕佹墜鍔ㄨ緭鍏ヤ紒涓氬悕绉帮紝绯荤粺浼氳嚜鍔ㄨ�板綍瀵瑰簲鐨勪笟鍔″憳鏄�璋侊紝骞跺湪鎴愬姛鍚庢帹閫侀拤閽堿I琛ㄦ牸銆�</p>
+        </div>
+    </div>
+
+    <div class="container" id="customer-portal" style="display: none;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: var(--secondary-color); font-weight: 800; margin: 0; font-size: 24px;">REACH24H</h2>
+            <div style="font-size: 12px; color: #64748b; letter-spacing: 2px;">鏉�宸炵憺娆х�戞妧鏈夐檺鍏�鍙�</div>
+        </div>
+        <h1>娆х洘CBAM闅愬惈纰虫帓鏀炬牳绠楁姤浠风郴缁�</h1>
+        <p class="subtitle">璇峰噯纭�濉�鍐欎互涓嬩俊鎭�锛岀郴缁熷皢涓烘偍鍖归厤鏈�閫傚悎鐨凜BAM闅愬惈鎺掓斁鏍哥畻鏂规�堝苟鐢熸垚鎶ヤ环銆�</p>
+
+        <div class="progress-bar">
+            <div class="progress-step active" id="indicator-1">1</div>
+            <div class="progress-step" id="indicator-2">2</div>
+            <div class="progress-step" id="indicator-3">3</div>
+        </div>
+
+        <form id="assessmentForm">
+            <!-- Step 1: 鍩虹��璋冩煡 -->
+            <div class="step-container active" id="step1">
+                <!-- 瀹㈡埛浼佷笟鍚嶇О 鐜板湪琚�闅愯棌浜嗭紝鐢盪RL鍙傛暟鐩存帴甯﹀叆 -->
+                <div class="form-group" style="display:none;">
+                    <label>闅愬舰甯﹀叆鐨勫�㈡埛浼佷笟鍚嶇О</label>
+                    <input type="text" id="companyName" required placeholder="璇疯緭鍏ュ畬鏁寸殑浼佷笟鍚嶇О">
+                </div>
+
+                <div class="form-group">
+                    <label>1. 宸ュ巶鍙婄浉搴旂殑8浣嶄骇鍝佹捣鍏崇紪鐮� (8-Digit CN Code)</label>
+                    <div
+                        style="color: #dc2626; font-weight: bold; padding: 12px; background: #fef2f2; border-left: 4px solid #dc2626; border-radius: 4px; margin-bottom: 15px; font-size: 14px; line-height: 1.6;">
+                        馃毃 銆愰�庨櫓鎻愮ず銆戣�峰姟蹇呰皑鎱庨�夋嫨绮剧‘鐨� CN Code锛屼繚璇佹偍鐨勯�夋嫨鍜屽疄闄呭嚭鍙ｄ骇鍝佸畬鍏ㄤ竴鑷达紒<br>
+                        鑻� CN Code 閫夋嫨鎴栧綊绫婚敊璇�锛屽皢鍙�鑳界洿鎺ュ�艰嚧 2027 骞存�ｅ紡钀藉湴鏈熺殑鎺掓斁鎶ュ憡鏃犳硶閫氳繃鏍告煡鏈烘瀯鐨勬牳鏌ャ�傚�傛灉鎮ㄥ�逛骇鍝佺殑鍏蜂綋 CN Code
+                        鍒掑垎涓嶇‘瀹氾紝寮虹儓寤鸿��瀵绘眰涓撲笟鎶ュ叧鍗曚綅杩涜�岀簿鍑嗗垝鍒嗐��
+                    </div>
+                    <span class="help-text" style="color:#f59e0b; margin-bottom: 10px;">
+                        銆愬～鍐欒�存槑銆戯細濡傛灉鏈夊�氫釜宸ュ巶鐢熶骇涓嶅悓鐨勫彈鎺т骇鍝侊紝璇峰垎鍒�鐙�绔嬫坊鍔狅紝鍙�鍦ㄦ瘡涓�宸ュ巶涓嬫柊澧炲�氫釜浜у搧锛屼篃鍙�鏂板�炲伐鍘傘��
+                    </span>
+
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('manual', this)">鎵嬪姩濉�鎶ュ伐鍘備笌缂栫爜</div>
+                        <div class="tab" onclick="switchTab('upload', this)">鎵归噺瀵煎叆琛ㄦ牸 (宸ュ巶鍙婄墿鏂欐瀬澶氭椂)</div>
+                    </div>
+
+                    <div id="tab-manual" class="tab-content active">
+                        <div id="factoryContainer">
+                            <!-- 榛樿�ゅ睍绀轰竴涓�宸ュ巶鐨勫～鍐欐�� -->
+                            <div class="factory-box">
+                                <span class="factory-title"
+                                    style="font-weight: bold; color: #475569; margin-bottom: 8px; display:inline-block;">宸ュ巶/鍘傚尯
+                                    1</span>
+                                <input type="text" class="factory-name" placeholder="璇疯緭鍏ュ伐鍘傚悕绉帮紙濡傦細鎬诲巶/涓�杞﹂棿锛�" required
+                                    style="margin-bottom: 15px;">
+
+                                <div class="products-container">
+                                    <div class="product-item">
+                                        <input type="text" class="product-cn-code" list="cnCodeList"
+                                            placeholder="璇疯緭鍏ユ垨閫夋嫨8浣岰N Code (鏀�鎸佷笅鎷夎仈鎯�)" required>
+                                    </div>
+                                </div>
+                                <button type="button" class="add-product-btn" onclick="addProduct(this)">+ 鏂板�炰骇鍝� (CN
+                                    Code)</button>
+                            </div>
+                        </div>
+                        <button type="button" class="add-factory-btn" onclick="addFactory()">+ 娣诲姞涓嬩竴涓�鐙�绔嬪伐鍘�</button>
+                        <div id="cnCodeResult"
+                            style="margin-top: 5px; display: none; padding: 10px; border-radius: 6px; font-size: 14px;">
+                        </div>
+                    </div>
+
+                    <div id="tab-upload" class="tab-content">
+                        <p class="help-text" style="color: var(--text-color); font-weight: 500; margin-bottom: 12px;">
+                            鑻ヨ吹鍏�鍙稿瓨鍦ㄥぇ閲忓伐鍘傚強绻佹潅鐨勪骇鍝佸瀷鍙凤紝鍙�鐩存帴涓嬭浇琛ㄦ牸妯℃澘锛屾壒閲忔敹闆嗗悇宸ュ巶瀵瑰簲鐨� CN Code 鏄庣粏瀵煎叆銆�</p>
+
+                        <!-- 妯℃澘涓嬭浇鍖� -->
+                        <div
+                            style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                            <div
+                                style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 28px;">馃搵</span>
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 15px; color: #166534;">浼佷笟宸ュ巶鍙婁骇鍝丆N
+                                            Code鏄庣粏鏀堕泦琛�</div>
+                                        <div style="font-size: 12px; color: #64748b;">XLSX鏍煎紡 路 閫傜敤浜庡�氬伐鍘傘�佸�氫骇鍝佺殑鎵归噺濉�鎶�</div>
+                                    </div>
+                                </div>
+                                <a id="downloadTemplateBtn" href="javascript:void(0)"
+                                    style="background: var(--secondary-color); color: white; padding: 8px 18px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; white-space: nowrap; transition: background 0.2s;">猬�
+                                    涓嬭浇妯℃澘</a>
+                            </div>
+
+                            <div style="font-size: 13px; color: #475569; line-height: 1.7; margin-bottom: 14px;">
+                                <strong>馃摑 濉�鍐欒�存槑锛�</strong>姣忚�屽～鍐�<strong style="color:#dc2626;">涓�涓�宸ュ巶 + 涓�涓�浜у搧CN
+                                    Code</strong>鐨勭粍鍚堛��<br>
+                                路 鍚屼竴涓�宸ュ巶鏈夊�氫釜浜у搧 鈫� 宸ュ巶鍚嶇浉鍚岋紝鍒嗗�氳�屽～鍐欎笉鍚孋N Code<br>
+                                路 鍚屼竴涓�浜у搧鍦ㄥ�氫釜宸ュ巶鐢熶骇 鈫� CN Code鐩稿悓锛屽垎澶氳�屽～鍐欎笉鍚屽伐鍘傚悕<br>
+                                路 浜у搧涓�鏂囧悕鍜屽�囨敞涓洪�夊～锛屽府鍔╃憺娆ф牳瀵瑰噯纭�鎬�
+                            </div>
+
+                            <!-- 鍐呭祵棰勮�堣〃鏍� -->
+                            <div style="overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <table
+                                    style="width: 100%; border-collapse: collapse; font-size: 13px; background: white;">
+                                    <thead>
+                                        <tr style="background: #f1f5f9;">
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                搴忓彿</th>
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                宸ュ巶/鍘傚尯鍚嶇О <span style="color:#dc2626;">*</span></th>
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                8浣岰N Code <span style="color:#dc2626;">*</span></th>
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                浜у搧涓�鏂囧悕绉帮紙閫夊～锛�</th>
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                澶囨敞锛堥�夊～锛�</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr style="background: #fffbeb;">
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                1</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
+                                                鎬诲巶</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: var(--secondary-color); font-weight: 700;">
+                                                72071100</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                鏂瑰澂</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                2</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
+                                                鎬诲巶</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: var(--secondary-color); font-weight: 700;">
+                                                72142000</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                铻虹汗閽�</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                涓诲姏鍑哄彛浜у搧</td>
+                                        </tr>
+                                        <tr style="background: #f0f9ff;">
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                3</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
+                                                绗�浜屽垎鍘�</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: var(--secondary-color); font-weight: 700;">
+                                                76042910</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                閾濆瀷鏉�</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                4</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
+                                                绗�涓夊垎鍘傦紙閾搁�犺溅闂达級</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: var(--secondary-color); font-weight: 700;">
+                                                72071100</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                鏂瑰澂</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                鍚屼竴CN Code鍦ㄤ笉鍚屽伐鍘�</td>
+                                        </tr>
+                                        <tr style="color: #94a3b8; font-style: italic;">
+                                            <td style="padding: 8px 14px; color: #94a3b8;">...</td>
+                                            <td style="padding: 8px 14px;">锛堢户缁�娣诲姞锛�</td>
+                                            <td style="padding: 8px 14px;"></td>
+                                            <td style="padding: 8px 14px;"></td>
+                                            <td style="padding: 8px 14px;"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="text-align: right; margin-top: 8px; font-size: 11px; color: #94a3b8;">* 鏍囨敞 <span
+                                    style="color:#dc2626;">*</span> 涓哄繀濉�椤�</div>
+                        </div>
+
+                        <div class="upload-area" onclick="document.getElementById('cnCodeFile').click();"
+                            style="padding: 20px;">
+                            <div class="upload-icon" style="font-size: 24px;">馃摜</div>
+                            <p style="margin: 5px 0 0 0; font-size: 14px;">鐐瑰嚮涓婁紶濉�濂界殑娓呭崟 Excel 鎴� CSV 鏂囦欢</p>
+                            <span class="help-text" id="cnCodeFileName">鏈�閫夋嫨鏂囦欢</span>
+                            <input type="file" id="cnCodeFile" accept=".xlsx,.xls,.csv">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 鑱旀兂鏁版嵁闆嗭細鍦ㄧ郴缁熷姞杞芥椂浼氳�� JS 鍔ㄦ�佸～鍏� -->
+                <datalist id="cnCodeList"></datalist>
+
+                <div class="form-group">
+                    <label>2. 鎮ㄧ殑鐢熶骇宸ヨ壓灞炰簬浠ヤ笅鍝�绉嶏紵</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="processLength" value="short" required>
+                            <div>
+                                <div class="radio-label">鐭�娴佺▼锛堜粎鏈烘�板姞宸ャ�佺粍瑁呯瓑鐗╃悊鍙樺寲锛�</div>
+                                <div class="radio-desc">澶栬喘鎴愬瀷鐨勯噾灞炰欢/閾濅欢杩涜�岃溅閾ｅ埁纾ㄩ捇鎴栨嫾鎺ョ粍瑁呫��</div>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="processLength" value="long">
+                            <div>
+                                <div class="radio-label">闀挎祦绋嬶紙鍚�鍐堕噾銆侀摳閫犮�侀敾閫犮�佸寲宸ュ悎鎴愮瓑锛�</div>
+                                <div class="radio-desc">鑷�韬�鍖呭惈鐔旂偧銆佺儳缁撱�佺數瑙ｃ�佸寲瀛﹀弽搴旂瓑鍙戠敓鍖栧�︿笌鐩稿彉杩囩▼鐨勫伐鑹恒��</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="supplierQuestion" style="display: none;">
+                    <label>3. 閽堝�硅吹鍙哥敓浜ф墍闇�鐨勫叧閿�鍘熸潗鏂欙紙鍓嶄綋鐗╋級锛屾槸鍚﹁兘澶熻拷婧�骞跺悜渚涘簲鍟嗚幏鍙栧叾鈥滃疄娴嬪疄绠椻�濈殑纰虫帓鏀炬暟鎹�锛�</label>
+                    <span class="help-text"
+                        style="color: var(--error-color);">銆愰�庨櫓鎻愮ず銆戣嫢鏃犳硶杩芥函渚涘簲鍟嗗疄闄呮暟鎹�锛�2027骞磋捣灏嗘棤娉曢�氳繃鏍告煡锛屽繀椤讳娇鐢ㄨ緝楂樼殑娆х洘榛樿�ゅ�硷紝灏嗗�炲姞纰虫垚鏈�銆�</span>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="traceSupplier" value="yes">
+                            <div>
+                                <div class="radio-label">鏄�锛屽彲浠ユ帹鍔ㄥ苟杩芥函渚涘簲鍟嗚�佹暟鎹�</div>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="traceSupplier" value="no">
+                            <div>
+                                <div class="radio-label">鍚︼紝渚涘簲鍟嗕笉閰嶅悎/涓嶆効鎰忚姳璐圭簿鍔涘幓杩芥函</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>4. 鏈�娆¤繘琛岃�＄畻鐨勬牳蹇冮┍鍔ㄥ姏鏄�浠�涔堬紵</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="motivation" value="compliance" required>
+                            <div>
+                                <div class="radio-label">搴旀�ュ簲瀵癸細杈冪煭鏃堕棿鍐呰幏寰楅殣鍚�纰虫帓鏀炬暟鎹�锛屽垵姝ユ弧瓒充笅娓稿�㈡埛褰撳墠鐨勬暟鎹�瑕佹眰</div>
+                                <div class="radio-desc">浠ュ揩閫熸弧瓒冲綋鍓嶅�㈡埛鐨勬暟鎹�瑕佹眰涓哄�煎悜锛岀粨鍚堣�屼笟鍙傝�冨噯鍒欒繘琛岀悊璁轰及绠楋紝涓嶅己鍒惰�佹眰鍏ㄦ祦绋嬪疄娴嬪疄绠椼��</div>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="motivation" value="verification">
+                            <div>
+                                <div class="radio-label">闀胯繙鍚堣�勶細鎽稿簳鐪熷疄鐨勭⒊鎴愭湰锛岀粨鍚堝伐鍘備笌渚涘簲鍟嗗疄闄呮暟鎹�锛屼负閫氳繃2027骞存牳鏌ュ仛鍑嗗��</div>
+                                <div class="radio-desc">涓嶄粎涓轰簡濉�琛�锛屾洿涓轰簡浼樺寲渚涘簲閾炬綔鍦ㄧ◣鍔℃垚鏈�锛岄渶鐢辨妧鏈�缁勪粙鍏ヨ繘琛屼弗璋ㄧ殑瀹炴祴妯″瀷鏋勫缓涓庤瘉鎹�閾炬敹闆嗐��</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="button-group" style="justify-content: flex-end;">
+                    <button type="button" class="btn" onclick="nextStep(2)">涓嬩竴姝ワ細鐢熸垚鏍哥畻鏂规��</button>
+                </div>
+            </div>
+
+            <!-- Step 2: 缁撴灉鍒ゅ畾涓庨�庨櫓鎻愮ず -->
+            <div class="step-container" id="step2">
+                <div id="resultContent">
+                    <!-- 鍔ㄦ�佹敞鍏ヨ矾寰勫垽瀹氱粨鏋� -->
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep(1)">杩斿洖淇�鏀逛俊鎭�</button>
+                    <button type="button" class="btn" onclick="nextStep(3)" id="btnConfirmPath">纭�璁ゆ柟妗堬紝杩涘叆绯荤粺鑷�鍔ㄦ姤浠�</button>
+                </div>
+            </div>
+
+            <!-- Step 3: 绯荤粺鑷�鍔ㄦ姤浠� -->
+            <div class="step-container" id="step3">
+                <h3>绗�浜岄樁娈碉細鏍哥畻椤圭洰瑙勬ā浼扮畻涓庢姤浠�</h3>
+                <p>鏍规嵁鎮ㄥ～鎶ョ殑璁炬柦(宸ュ巶)鏁伴噺銆佸彈鎺�CN Code绉嶇被鏁颁互鍙婄敓浜у伐鑹哄�嶆潅搴︼紝绯荤粺宸蹭负鎮ㄨ嚜鍔ㄧ敓鎴愭湰娆�CBAM闅愬惈纰虫帓鏀炬牳绠楁湇鍔＄殑棰勪及璐圭敤銆�</p>
+
+                <div class="result-box" style="background:#f0fdf4; border:1px solid #bbf7d0; margin-bottom:20px;">
+                    <div style="font-size: 16px; margin-bottom: 10px; color: #166534;">馃搲 <strong>椤圭洰鎶ヤ环鏄庣粏</strong></div>
+                    <ul style="line-height: 1.8; font-size: 15px; color: #334155;">
+                        <li>鎮ㄦ墍閫夊伐鑹猴細<span id="quoteProcessType" style="font-weight:bold;">鏈�璇嗗埆</span></li>
+                        <li>绯荤粺鍒ゆ柇鍩哄噯鍗曚环锛�<span id="quoteUnitPrice"
+                                style="font-weight:bold; color:var(--primary-color);">0</span> 鍏� / (姣忓巶路姣忎骇鍝佷唬鐮�)</li>
+                        <li>濉�鎶ヨ寖鍥磋�¤垂閲忥細<span id="quoteCodeCount" style="font-weight:bold;">0</span> 涓�璁￠噺鍩烘湰鍗曞厓</li>
+                        <li id="quoteSurchargeRow" style="display:none;">浜や粯鐗╅檮鍔犺垂锛�<span id="quoteSurcharge" style="font-weight:bold; color:var(--secondary-color);">0</span> 鍏冿紙澶氶�変氦浠樼墿鍔犳敹锛�</li>
+                        <hr style="border:0; border-top:1px dashed #cbd5e1; margin: 15px 0;">
+                        <li style="font-size: 18px; color: #0f172a;">鏈�椤圭洰棰勪及鎬婚噾棰濓細<span id="quoteTotalPrice"
+                                style="font-weight:bold; font-size: 26px; color: var(--error-color);">0</span> 鍏冧汉姘戝竵 (鍚�绋�)
+                        </li>
+                    </ul>
+
+                    <div id="quoteSupplierNote"
+                        style="display: none; margin-top: 15px; padding: 12px; background-color: #fff1f2; border: 1px solid #fda4af; border-left: 4px solid var(--error-color); border-radius: 4px; color: #be123c; font-size: 13.5px; line-height: 1.6;">
+                        <strong>鈿狅笍 鍓嶄綋鏉愭枡渚涘簲鍟嗘牳绠楄�存槑锛�</strong><br>
+                        鐢变簬鎮ㄥ湪涓婁竴姝ュ嬀閫変簡鈥滈渶瑕佽拷婧�渚涘簲鍟嗗疄娴嬫暟鎹�鈥濓紝姝ら」棰勪及鎬婚噾棰�<strong>浠呬负璐靛徃鑷�鏈夎�炬柦锛堝伐鍘傦級鐨勭洿鎺ユ帓鏀炬牳绠楁湇鍔¤垂</strong>銆�<br>
+                        渚涘簲鍟嗙殑闅愬惈纰虫帓鏀炬牳绠楀皢鍦ㄦ妧鏈�鍥㈤槦鑾峰彇鎮ㄥ叿浣撶殑鍓嶄綋鏉愭枡閲囪喘娓呭崟鍚庯紝鏍规嵁渚涘簲鍟嗚�炬柦鏁伴噺鍙婁骇鍝佺被鍒�锛�<strong>渚濈収鍚屼竴鍩哄噯鍗曚环鍙﹁�屾姤浠�</strong>銆�<br>
+                        <strong>鈿狅笍
+                            閲嶈�佹彁绀猴細</strong>褰撳墠鎶ヤ环涓嶅寘鍚�鍚庣画鐨勭洃娴嬭�″垝缂栧埗涓庣��涓夋柟鏍告煡璐圭敤銆傝嫢闇�閫氳繃2027骞碈BAM姝ｅ紡鏍告煡锛岃吹鍙稿強渚涘簲鍟嗗潎闇�寤虹珛绗﹀悎娉曡�勭殑鐩戞祴璁″垝锛屾�や负鐙�绔嬫湇鍔￠」鐩�銆�</strong>
+                    </div>
+
+                    <p
+                        style="font-size: 12px; color:#64748b; margin-top:15px; background: #fff; padding: 10px; border-radius: 4px;">
+                        * 娉�锛氭偍鍙�浠ラ殢鏃跺叧闂�姝ら〉闈㈣�风ず棰勭畻瀹℃壒銆備笅娆＄偣鍑诲悓涓�閾炬帴鍗冲彲鍦ㄥ綋鍓嶉〉闈㈢洿鎺ユ仮澶嶆墍鏈夎繘搴︺��</p>
+                </div>
+
+                <div class="button-group" style="display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep(2)"
+                        style="flex: 1;">杩斿洖涓婁竴姝�</button>
+                    <button type="button" class="btn" onclick="submitQuote('special')"
+                        style="flex: 1; background-color: #f59e0b; color: white;">鐗规畩宸ヨ壓鎯呭喌锛岄�氱煡涓氬姟椤鹃棶鑱旂郴</button>
+                    <button type="button" class="btn" onclick="submitQuote('confirmed')"
+                        style="flex: 2;">纭�璁ゆ姤浠凤紝淇濆瓨淇℃伅</button>
+                </div>
+            </div>
+
+            <!-- Step 5: 鏍规嵁璺�寰勫垎娴佽嚦瀵瑰簲璧勬枡鎻愪氦閫氶亾 -->
+            <div class="step-container" id="step5">
+
+                <!-- 鏂规�圓锛氳�炬柦鐩存帴鎺掓斁鏍哥畻+鍓嶄綋鏉愭枡缂虹渷鍊� -->
+                <div id="pathA_execution" style="display: none;">
+                    <h3>璇蜂笅杞藉苟濉�鍐欍�奀BAM璁炬柦鑳芥簮涓庤繃绋嬫暟鎹�鏀堕泦琛ㄣ��</h3>
+                    <p>鎮ㄧ殑鏍哥畻鏂规�堜负<strong>銆愭柟妗圓锛氳�炬柦鐩存帴鎺掓斁鏍哥畻 +
+                            鍓嶄綋鏉愭枡缂虹渷鍊�</strong>銆傛垜浠�灏嗘敹闆嗚吹鍙歌�炬柦鐨勭洿鎺ユ帓鏀剧浉鍏虫暟鎹�锛堢噧鏂欐秷鑰椼�佽繃绋嬫帓鏀俱�佺數鍔涙秷鑰楃瓑锛夛紝鍓嶄綋鏉愭枡锛堝師鏉愭枡锛夋殏閲囩敤娆х洘瀹樻柟缂虹渷鍊笺�傝�蜂笅杞藉苟濉�鍐欐敹闆嗚〃銆�</p>
+
+                    <div class="download-card">
+                        <div class="download-info">
+                            <span style="font-size: 24px;">馃搫</span>
+                            <div>
+                                <strong>閽㈤搧鍙婇摑琛屼笟鏁版嵁鏀堕泦琛�</strong>
+                                <div style="font-size: 13px; color: #64748b;">(0312閽㈤搧銆侀摑鈥旂畝鐗堜俊鎭�鏀堕泦闂�绛旇〃(鐟炴�у畾鍒�).xlsm)</div>
+                            </div>
+                        </div>
+                        <a href="javascript:alert('涓氬姟鍛橈細姝ゆ寜閽�闇�澶栭摼鍒颁綘浠�鍏�鍙哥殑浜戠洏/鏂囦欢鏈嶅姟鍣ㄤ笂鐨勫疄闄呮枃浠�');" class="download-btn">鐐瑰嚮涓嬭浇</a>
+                    </div>
+
+                    <p class="help-text" style="text-align: right; margin-bottom: 20px;">
+                        *鑻ユ偍鐨勪骇鍝侀潪閽㈤搧鎴栭摑鍒跺搧锛岃�疯仈绯讳笟鍔￠【闂�鑾峰彇瀵瑰簲琛屼笟涓撶敤琛ㄦ牸銆�</p>
+
+                    <label style="margin-top: 30px;">璇蜂笂浼犲～鍐欏畬鎴愮殑鏁版嵁鏀堕泦琛�锛�</label>
+                    <div class="upload-area" onclick="document.getElementById('fileA').click();">
+                        <div class="upload-icon">馃搧</div>
+                        <p>鐐瑰嚮姝ゅ�勯�夋嫨鏂囦欢锛屾垨灏嗚〃鏍兼嫋鎷借嚦姝ゆ�嗗唴</p>
+                        <span class="help-text" id="fileNameA">鏈�閫夋嫨鏂囦欢</span>
+                        <input type="file" id="fileA" accept=".xlsx,.xlsm,.xls">
+                    </div>
+                </div>
+
+                <!-- 鏂规�圔锛氬叏閾捐矾瀹炴祴鏍哥畻锛堝惈渚涘簲鍟嗗墠浣撴潗鏂欙級-->
+                <div id="pathB_execution" style="display: none;">
+                    <h3>璇锋彁浜よ�炬柦宸ョ▼璧勬枡锛堢幆璇勬姤鍛�/宸ヨ壓娴佺▼鍥剧瓑锛�</h3>
+                    <p>鎮ㄧ殑鏍哥畻鏂规�堜负<strong>銆愭柟妗圔鍚堣�勫疄绠椼�戯細宸ュ巶鏁版嵁瀹為檯璁＄畻+渚涘簲鍟嗗疄闄呮暟鎹�</strong>銆傛妧鏈�鍥㈤槦闇�娣卞叆鍒嗘瀽璐靛徃璁炬柦鐨勭敓浜ц矾绾匡紙Production
+                        Route锛夊拰绯荤粺杈圭晫锛屼互杩涜�屽熀浜庡疄娴嬬殑闅愬惈鎺掓斁鏍哥畻銆�</p>
+
+                    <div class="result-box result-path-b" style="margin-bottom: 20px;">
+                        <strong>璧勬枡闇�姹傛竻鍗曪紙璇蜂紭鍏堟彁渚涚幆璇勬姤鍛婏級锛�</strong>
+                        <ul style="margin-top: 8px; margin-bottom: 0; padding-left: 20px; font-size: 14px;">
+                            <li>瀹屾暣鐗堛�婄幆澧冨奖鍝嶈瘎浠锋姤鍛婁功/琛ㄣ�嬶紙鍚�鐢熶骇宸ヨ壓娴佺▼鍥俱�佺墿鏂欎笌鑳芥簮杈撳叆杈撳嚭骞宠　琛�锛�</li>
+                            <li>鑻ユ棤鐜�璇勶紝璇锋彁渚涘寘鍚�浠ヤ笅鍐呭�圭殑鏂囦欢锛氳�︾粏鐢熶骇宸ヨ壓姝ラ�ゃ�佸悇鎺掓斁婧愶紙Emission Source锛変笌婧愭祦锛圫ource Stream锛夌殑鎶曞叆浜у嚭娓呭崟銆佽兘婧愭潵婧愩�佽�炬柦骞抽潰甯冨眬鍥俱��
+                            </li>
+                        </ul>
+                    </div>
+
+                    <label>璇锋墦鍖呬笂浼犲伐绋嬩笌鐜�淇濈浉鍏虫枃浠讹細</label>
+                    <div class="upload-area" onclick="document.getElementById('fileB').click();">
+                        <div class="upload-icon">馃搫</div>
+                        <p>鐐瑰嚮姝ゅ�勯�夋嫨鐜�璇勬姤鍛婄瓑鏂囦欢锛屾垨鎷栨嫿鑷虫�ゆ�嗗唴</p>
+                        <span class="help-text" id="fileNameB">鏈�閫夋嫨鏂囦欢 (鏀�鎸� PDF, Word, ZIP鍘嬬缉鍖�)</span>
+                        <input type="file" id="fileB" accept=".pdf,.doc,.docx,.zip,.rar">
+                    </div>
+
+                    <div class="form-group">
+                        <label>鏄�鍚︽�                            const newBox = document.createElement('div');WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=鎮ㄧ殑鏈哄櫒浜篢oken";
+
+        // 鏀堕泦鐨勫墠绔�鏁版嵁缁撴瀯绀轰緥
+        const formData = {
+            company: document.getElementById('companyName').value,
+            // 濡傛灉鏄�鎵嬪姩濉�鍐欑殑锛�
+            factories: Array.from(document.querySelectorAll('.factory-box')).map(box => ({
+                name: box.querySelector('.factory-name').value,
+                codes: box.querySelector('.factory-cn-codes').value
+            })),
+            // 鍏朵粬棰樼洰鐨勭瓟妗�
+            processType: document.querySelector('input[name="processLength"]:checked')?.value,
+            isTrackable: document.querySelector('input[name="traceSupplier"]:checked')?.value || 'N/A',
+            motivation: document.querySelector('input[name="motivation"]:checked')?.value,
+            matchedPath: finalPath // 绯荤粺鍒ゅ畾鐨� A鎴朆
+        };
+
+        // 灏� formData 鎵撳寘鍚庯紝鍚戞偍鐨勫悗绔�鏈嶅姟鍣ㄥ彂璧� POST 璇锋眰
+        // 鎮ㄧ殑鍚庣��鏈嶅姟鍣ㄥ啀鍘绘妸瀹㈡埛涓婁紶鐨勫疄浣撴枃浠惰浆瀛樿嚦鑵捐��浜�/浜氶┈閫奡3锛屽苟鑾峰彇URL
+        // 鏈�鍚庣粍瑁呭嚭Markdown鏂囨湰锛屽彂閫佺粰閽夐拤锛�
+        
+        {
+            "msgtype": "markdown",
+            "markdown": {
+                "title": "馃毃 鏂板�濩BAM涓氬姟鍒嗛厤閫氱煡",
+                "text": "### 鏀跺埌鏂扮殑瀹㈡埛璁＄畻鏈嶅姟绾跨储\n" +
+                        "> **浼佷笟鍚嶇О**锛氭澀宸炴煇绉戞妧鍏�鍙竆n" +
+                        "> **鍒嗛厤璺�鐢�**锛�<font color=\"#10b981\">銆愯矾寰凚 - 瀹屾暣瀹炵畻銆�</font>\n\n" +
+                        "> **宸ュ巶鍙婄�¤緰鑼冨洿**锛氬叡2涓�鍘傚尯\n" +
+                        "> 鈥� 閾濅欢鍒嗗巶 (妫�娴嬪埌2涓�鍙楁帶浠ｇ爜)\n\n" +
+                        "**鎿嶄綔**锛歔鐐瑰嚮姝ゅ�勫墠寰�鍐呴儴OA涓嬭浇鍏跺伐鑹哄強鐜�璇勭墿鏂橾(http://鎮ㄧ殑OA缃戠珯.com/download?id=xxx)\n"
+            }
+        }
+        */
+
+        let factoryCounter = 1;
+        let activeTab = 'manual';
+
+        // XSS 闃叉姢杞�涔夊嚱鏁�
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+        }
+
+        // 鏇存柊宸ュ巶搴忓彿
+        function updateFactoryIndexes() {
+            const boxes = document.querySelectorAll('.factory-box');
+            factoryCounter = 0;
+            boxes.forEach(box => {
+                factoryCounter++;
+                const titleStr = box.querySelector('.factory-title');
+                if (titleStr) titleStr.innerText = '宸ュ巶/鍘傚尯 ' + factoryCounter;
+            });
+        }
+
+        // URL 鍙傛暟瑙ｆ瀽閫昏緫
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlSales = urlParams.get('sales');
+        const urlCompany = urlParams.get('company');
+        const urlPhone = urlParams.get('phone');  // 涓氬姟鍛樻墜鏈哄彿锛堢敤浜庨拤閽堾鎻愰啋锛�
+
+        // ==== 銆愭柊澧炪�戠姸鎬佹寔涔呭寲閫昏緫 - 鍔犺浇杩涘害 ====
+        function loadProgress() {
+            if (!urlCompany) return;
+            const savedDataStr = localStorage.getItem("cbamProgress_" + urlCompany);
+            if (savedDataStr) {
+                try {
+                    const data = JSON.parse(savedDataStr);
+                    // 鎭㈠�嶅伐鍘傛暟鎹�
+                    if (data.factories && data.factories.length > 0) {
+                        const container = document.getElementById('factoryContainer');
+                        container.innerHTML = ''; // 娓呯┖榛樿��
+                        factoryCounter = 0;
+                        data.factories.forEach(f => {
+                            factoryCounter++;
+                            const newBox = document.createElement('div');
+
+                            newBox.className = 'factory-box';
+
+                            const deleteBtn = factoryCounter > 1 ? `<button type="button" class="delete-factory-btn" onclick="this.parentElement.remove(); updateFactoryIndexes(); checkAllCNCodes();">×</button>` : '';
+
+                            let productsHtml = '';
+
+                            if (f.codes) {
+
+                                f.codes.split(',').forEach(code => {
+
+                                    productsHtml += `<div class="product-row"><input type="text" class="product-cn-code" value="${code}" placeholder="输入CN Code"></div>`;
+
+                                });
+
+                            } else {
+
+                                productsHtml = `<div class="product-row"><input type="text" class="product-cn-code" placeholder="输入CN Code"></div>`;
+
+                            }
+
+                            newBox.innerHTML = `
+
+                            ${deleteBtn}
+
+                                <span class="factory-title" style="font-weight: bold; color: #475569; margin-bottom: 8px; display:inline-block;">宸ュ巶/鍘傚尯 ${factoryCounter}</span>
+                                <input type="text" class="factory-name" placeholder="璇疯緭鍏ュ伐鍘傚悕绉帮紙濡傦細鍠锋秱杞﹂棿/绗�浜屽垎鍘傦級" required style="margin-bottom: 15px;" value="${escapeHTML(f.name)}">
+                                <div class="products-container">
+                                    ${productsHtml}
+                                </div>
+                                <button type="button" class="add-product-btn" onclick="addProduct(this)">+ 鏂板�炰骇鍝� (CN Code)</button>
+                            `;
+                            container.appendChild(newBox);
+                            newBox.querySelectorAll('.product-cn-code').forEach(input => input.addEventListener('input', checkAllCNCodes));
+                        });
+                        checkAllCNCodes();
+                    }
+
+                    // 鎭㈠�嶅崟閫夋寜閽�
+                    if (data.processLength) {
+                        const radio = document.querySelector('input[name="processLength"][value="' + data.processLength + '"]');
+                        if (radio) {
+                            radio.checked = true;
+                            // 瑙﹀彂 change 浜嬩欢浠ユ樉绀�/闅愯棌渚涘簲鍟嗘ā鍧�
+                            const event = new Event('change');
+                            radio.dispatchEvent(event);
+                        }
+                    }
+                    if (data.traceSupplier) {
+                        const radio = document.querySelector('input[name="traceSupplier"][value="' + data.traceSupplier + '"]');
+                        if (radio) radio.checked = true;
+                    }
+                    if (data.motivation) {
+                        const radio = document.querySelector('input[name="motivation"][value="' + data.motivation + '"]');
+                        if (radio) radio.checked = true;
+                    }
+
+                    // 寮瑰嚭鎻愮ず妗嗘仮澶嶆�ラ��
+                    if (data.currentStep && data.currentStep > 1) {
+                        // 姝ゅ�勫�傛灉瀹㈡埛鍒锋柊浜嗭紝鎴戜滑鍙�浠ラ潤榛樻垨鑰呮彁绀烘仮澶�
+                        setTimeout(() => {
+                            // 涓轰簡涓嶆墦鏂�瀹㈡埛鐨勪綋楠岋紝鍙�鍦ㄧ‘瀹炴湁鍚庣画姝ラ�ゆ椂闈欓粯璺宠浆
+                            if (confirm("妫�娴嬪埌璐靛徃涓婃�℃湁鏈�瀹屾垚鐨勫～鎶ヨ繘搴︼紙鍋滅暀鍦ㄧ�� " + data.currentStep + " 姝ワ級銆俓\n鏄�鍚︾珛鍗虫仮澶嶈嚦璇ヨ�板綍锛�")) {
+                                nextStep(data.currentStep, true);
+                            }
+                        }, 500);
+                    }
+                } catch (e) {
+                    console.log("鍔犺浇杩涘害澶辫触", e);
+                }
+            }
+        }
+
+        // ==== 銆愭柊澧炪�戠姸鎬佹寔涔呭寲閫昏緫 - 淇濆瓨杩涘害 ====
+        function saveProgress(currentStep) {
+            if (!urlCompany) return;
+            const factories = [];
+            document.querySelectorAll('.factory-box').forEach(box => {
+                let codesArr = [];
+                box.querySelectorAll('.product-cn-code').forEach(input => {
+                    if (input.value.trim()) codesArr.push(input.value.trim());
+                });
+                factories.push({
+                    name: box.querySelector('.factory-name').value || '',
+                    codes: codesArr.join(',')
+                });
+            });
+            const data = {
+                currentStep: currentStep,
+                factories: factories,
+                processLength: document.querySelector('input[name="processLength"]:checked')?.value || '',
+                traceSupplier: document.querySelector('input[name="traceSupplier"]:checked')?.value || '',
+                motivation: document.querySelector('input[name="motivation"]:checked')?.value || '',
+            };
+            localStorage.setItem("cbamProgress_" + urlCompany, JSON.stringify(data));
+        }
+
+        if (urlSales && urlCompany) {
+            // 甯︽湁鍙傛暟锛岃�存槑鏄�瀹㈡埛鎵撳紑鐨勫～鍐欓〉闈�
+            document.getElementById('sales-portal').style.display = 'none';
+            document.getElementById('customer-portal').style.display = 'block';
+            document.getElementById('companyName').value = decodeURIComponent(urlCompany);
+
+            // 鎵ц�屽巻鍙茶�板綍鍔犺浇
+            loadProgress();
+        } else {
+            // 娌℃湁鍙傛暟锛岃�存槑鏄�涓氬姟鍛樻墦寮�鐨勫彂鍗曢〉闈�
+            document.getElementById('sales-portal').style.display = 'block';
+            document.getElementById('customer-portal').style.display = 'none';
+
+            // 自动填充上次保存的业务员信息
+            const savedSalesName = localStorage.getItem('cbam_sales_name');
+            const savedSalesPhone = localStorage.getItem('cbam_sales_phone');
+            if (savedSalesName) document.getElementById('salesName').value = savedSalesName;
+            if (savedSalesPhone) document.getElementById('salesPhone').value = savedSalesPhone;
+        }
+
+        // 涓氬姟鍛樼敓鎴愪笓灞為摼鎺�
+        function generateCustomerLink() {
+
+            const sales = document.getElementById('salesName').value.trim();
+
+            const phone = document.getElementById('salesPhone').value.trim();
+
+            const company = document.getElementById('salesCompanyName').value.trim();
+
+            if (!sales || !company) {
+
+                alert('请完整填写业务员姓名和客户企业名称！');
+
+                return;
+
+            }
+
+            if (!phone) {
+
+                alert('请填写您的手机号，以便客户提交后系统通过钉钉@您提醒！');
+
+                return;
+
+            }
+
+
+
+            // 保存业务员信息到localStorage，方便下次自动填充
+
+            localStorage.setItem('cbam_sales_name', sales);
+
+            localStorage.setItem('cbam_sales_phone', phone);
+
+
+
+            let baseUrl = window.location.origin + window.location.pathname;
+
+
+
+            if (window.location.protocol === 'file:') {
+
+                alert("【提示】您当前是在本地直接双击打开的文件作为测试验证。原生的链接会是一长串本地路径（file:///C:/...）。\n\n为了给您演示最终\"客户填表视角\"的效果，您可以复制下方链接在浏览器中打开。部署到服务器后此提示不会出现。");
+
+            }
+
+
+
+            // 在URL中携带手机号（用于客户提交后钉钉@提醒业务员）
+
+            const finalUrl = baseUrl + "?sales=" + encodeURIComponent(sales) + "&company=" + encodeURIComponent(company) + "&phone=" + encodeURIComponent(phone);
+
+
+
+            const shareText = `尊敬的 ${company} 负责人：\n\n为了匹配贵司出口产品合适的CBAM隐含碳排放核算方案，并进行报价，请点击下方专属链接，用1分钟完成线上的信息提交（已为您自动填入业务员信息）：\n\n${finalUrl}\n\n感谢贵司的配合！\n杭州瑞欧科技有限公司 ${sales}`;
+
+
+
+            const copyText = document.getElementById('generatedLink');
+
+            copyText.value = shareText;
+
+            document.getElementById('generatedLinkArea').style.display = 'block';
+
+
+
+            // 自动辅助复制到剪切板
+
+            copyText.select();
+
+            copyText.setSelectionRange(0, 99999);
+
+            try {
+
+                document.execCommand('copy');
+
+                alert('✅ 文案及链接已成功复制！请直接在微信中粘贴发送给客户。');
+
+            } catch (err) {
+
+                console.log('复制失败');
+
+            }
+
+        }
+
+
+        function switchTab(tabId, element) {
+            activeTab = tabId;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            if (element) {
+                element.classList.add('active');
+            } else {
+                const targetTab = document.querySelector(`.tab[onclick*="${tabId}"]`);
+                if (targetTab) targetTab.classList.add('active');
+            }
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function addFactory() {
+            factoryCounter++;
+            const container = document.getElementById('factoryContainer');
+            const newBox = document.createElement('div');
+            newBox.className = 'factory-box';
+            newBox.innerHTML = `
+                <button type="button" class="remove-factory" onclick="this.parentElement.remove(); updateFactoryIndexes(); checkAllCNCodes();">鉁� 鍒犻櫎宸ュ巶</button>
+                <span class="factory-title" style="font-weight: bold; color: #475569; margin-bottom: 8px; display:inline-block;">宸ュ巶/鍘傚尯 ${factoryCounter}</span>
+                <input type="text" class="factory-name" placeholder="璇疯緭鍏ュ伐鍘傚悕绉帮紙濡傦細鍠锋秱杞﹂棿/绗�浜屽垎鍘傦級" required style="margin-bottom: 15px;">
+                <div class="products-container">
+                    <div class="product-item">
+                        <input type="text" class="product-cn-code" list="cnCodeList" placeholder="璇疯緭鍏ユ垨閫夋嫨8浣岰N Code (鏀�鎸佷笅鎷夎仈鎯�)" required>
+                    </div>
+                </div>
+                <button type="button" class="add-product-btn" onclick="addProduct(this)">+ 鏂板�炰骇鍝� (CN Code)</button>
+            `;
+            container.appendChild(newBox);
+
+            updateFactoryIndexes();
+            newBox.querySelectorAll('.product-cn-code').forEach(input => input.addEventListener('input', checkAllCNCodes));
+        }
+
+        // 鏂板�炰骇鍝佸～鍐欒��
+        function addProduct(btnElement) {
+            const container = btnElement.parentElement.querySelector('.products-container');
+            const newProduct = document.createElement('div');
+            newProduct.className = 'product-item';
+            newProduct.innerHTML = `
+                <input type="text" class="product-cn-code" list="cnCodeList" placeholder="璇疯緭鍏ユ垨閫夋嫨8浣岰N Code (鏀�鎸佷笅鎷夎仈鎯�)" required>
+                <button type="button" class="btn-remove-product" onclick="this.parentElement.remove(); checkAllCNCodes();">鉁� 浜у搧</button>
+            `;
+            container.appendChild(newProduct);
+            newProduct.querySelector('.product-cn-code').addEventListener('input', checkAllCNCodes);
+        }
+
+        // 缁熶竴妫�娴嬫墍鏈夎緭鍏ユ�嗛噷鐨凜N Codes
+        function checkAllCNCodes() {
+            const resultDiv = document.getElementById('cnCodeResult');
+            const inputs = document.querySelectorAll('.product-cn-code');
+            let allVal = "";
+            inputs.forEach(t => allVal += t.value + " ");
+
+            const val = allVal.trim();
+            if (!val) {
+                resultDiv.style.display = 'none';
+                return;
+            }
+
+            // 閲囩敤鏈�鏆村姏鐨勬寜鈥滀换浣曢潪鏁板瓧鈥濆瓧绗﹁繘琛屽垏鍓诧紝瀹岀編鍏煎�瑰悇绉嶅叏瑙掓爣鐐广�佹崲琛屻�佷贡鍒掔嚎銆佺壒娈婄┖鏍肩殑杈撳叆
+            const codes = val.split(/[^\d]+/g).filter(c => c.length >= 4);
+
+            if (codes.length === 0) {
+                resultDiv.style.display = 'none';
+                return;
+            }
+
+            let controlledCount = 0;
+            let controlledList = [];
+
+            codes.forEach(code => {
+                if (checkIsControlled(code)) {
+                    // 鍘婚噸灞曠ず
+                    if (!controlledList.includes(code)) {
+                        controlledCount++;
+                        controlledList.push(code);
+                    }
+                }
+            });
+
+            resultDiv.style.display = 'block';
+            if (controlledCount > 0) {
+                resultDiv.style.backgroundColor = '#ecfdf5';
+                resultDiv.style.border = '1px solid #10b981';
+                resultDiv.style.color = '#047857';
+                resultDiv.innerHTML = `<strong>鍦ㄦ偍杈撳叆鐨勬墍鏈夊伐鍘備腑锛屽叡妫�娴嬪埌 ${controlledCount} 涓�鏃犻噸澶嶅彈鎺т唬鐮�:</strong> ${controlledList.join(', ')}銆�<br>宸茬‘璁ゅ睘浜嶤BAM绠¤緰鑼冨洿銆俙;
+            } else {
+                resultDiv.style.backgroundColor = '#fef2f2';
+                resultDiv.style.border = '1px solid #ef4444';
+                resultDiv.style.color = '#b91c1c';
+                resultDiv.innerHTML = `<strong>鏈�妫�娴嬪埌鍙楁帶浠ｇ爜銆�</strong><br>璇锋��鏌ヨ緭鍏ユ牸寮忥紝鎴栧墠寰� <a href="https://www.chemcheck24h.com/" target="_blank" style="color:#b91c1c;text-decoration:underline;">鐟炴煡鏌�</a> 杩涗竴姝ョ‘璁ゃ�俙;
+            }
+        }
+
+        // 鍒濆�嬪寲鍔犺浇鏃跺～鍏呬笅鎷夎仈鎯宠瘝搴� & 鐢熸垚XLSX妯℃澘
+        window.addEventListener('DOMContentLoaded', () => {
+            // 濉�鍏匔N Code涓嬫媺鑱旀兂璇嶅簱
+            const datalist = document.getElementById('cnCodeList');
+            if (typeof cbamControlledCodes !== 'undefined') {
+                cbamControlledCodes.forEach(code => {
+                    const option = document.createElement('option');
+                    option.value = code;
+                    datalist.appendChild(option);
+                });
+            }
+
+            // 鍒濆�嬪寲缁戝畾CN Code杈撳叆妗嗕簨浠�
+            document.querySelectorAll('.product-cn-code').forEach(el => {
+                el.addEventListener('input', checkAllCNCodes);
+            });
+
+            // 鍔ㄦ�佺敓鎴怷LSX妯℃澘涓嬭浇锛堢編瑙傜殑Excel鏍煎紡锛�
+            const downloadBtn = document.getElementById('downloadTemplateBtn');
+            if (downloadBtn) {
+                downloadBtn.removeAttribute('href');
+                downloadBtn.style.cursor = 'pointer';
+                downloadBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    generateXlsxTemplate();
+                });
+            }
+        });
+
+        // 鐩戝惉鏂囦欢涓婁紶鏀瑰彉鍚嶇О灞曠ず
+        document.getElementById('cnCodeFile').addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                document.getElementById('cnCodeFileName').textContent = '宸查�夋嫨: ' + e.target.files[0].name;
+                document.getElementById('cnCodeFileName').style.color = 'var(--secondary-color)';
+                document.getElementById('cnCodeFileName').style.fontWeight = 'bold';
+            }
+        });
+
+        // 鐩戝惉宸ヨ壓绫诲瀷鐨勫彉鍖栦互鍐冲畾鏄�鍚﹀睍绀轰緵搴斿晢杩芥函棰�
+        document.querySelectorAll('input[name="processLength"]').forEach((elem) => {
+            elem.addEventListener("change", function (event) {
+                var item = event.target.value;
+                if (item === "short") {
+                    document.getElementById("supplierQuestion").style.display = "block";
+                } else {
+                    document.getElementById("supplierQuestion").style.display = "none";
+                    // 闀挎祦绋嬪己鍒堕渶瑕佸幓杩芥函鎴栬�呰�存湰鍘傚氨闈炲父澶嶆潅锛岀洿鎺ョ撼鍏ヨ矾寰凚閫昏緫銆�
+                }
+            });
+        });
+
+        // 页面加载时检查是否已有选中状态（修复浏览器自动恢复表单时change事件不触发的bug）
+        const initProcess = document.querySelector('input[name="processLength"]:checked');
+        if (initProcess && initProcess.value === 'short') {
+            document.getElementById("supplierQuestion").style.display = "block";
+        }
+
+        // 娉ㄦ剰锛歝ontractFile 鍏冪礌宸茬Щ闄わ紝姝ゅ�勪笉鍐嶇粦瀹氫簨浠剁洃鍚�鍣�
+
+        // 鐩戝惉鏂囦欢涓婁紶鏀瑰彉鍚嶇О灞曠ず
+        document.getElementById('fileA').addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                document.getElementById('fileNameA').textContent = '宸查�夋嫨: ' + e.target.files[0].name;
+                document.getElementById('fileNameA').style.color = 'var(--secondary-color)';
+                document.getElementById('fileNameA').style.fontWeight = 'bold';
+            }
+        });
+
+        document.getElementById('fileB').addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                document.getElementById('fileNameB').textContent = '宸查�夋嫨: ' + e.target.files[0].name;
+                document.getElementById('fileNameB').style.color = 'var(--secondary-color)';
+                document.getElementById('fileNameB').style.fontWeight = 'bold';
+            }
+        });
+
+        // 瀛樺偍鍒ゅ畾鐨勮矾寰勭粨鏋�
+        let finalPath = "";
+
+        // ===== 浜や粯鐗╅�夋嫨鐩稿叧鍑芥暟 =====
+        // 鏇存柊浜や粯鐗ヽheckbox鐨勭埗label鏍峰紡
+        function updateDeliverableUI(checkbox) {
+            const label = checkbox.closest('.deliverable-item');
+            if (checkbox.checked) {
+                label.classList.add('checked');
+            } else {
+                label.classList.remove('checked');
+            }
+        }
+
+        // 璁＄畻浜や粯鐗╅檮鍔犺垂锛堣秴杩�1椤癸紝姣忓��1椤瑰姞1000鍏冿級
+        function updateDeliverableSurcharge(path) {
+            const checkboxes = document.querySelectorAll('input[name="deliverable' + path + '"]:checked');
+            const count = checkboxes.length;
+            const surcharge = count > 1 ? (count - 1) * 1000 : 0;
+            const surchargeEl = document.getElementById('surcharge' + path);
+            if (surchargeEl) {
+                if (surcharge > 0) {
+                    surchargeEl.style.display = 'block';
+                    surchargeEl.textContent = '宸查�夋嫨 ' + count + ' 椤逛氦浠樼墿锛岄檮鍔犺垂锛�+楼' + surcharge.toLocaleString();
+                } else {
+                    surchargeEl.style.display = 'none';
+                }
+            }
+        }
+
+        // 鑾峰彇褰撳墠浜や粯鐗╅檮鍔犺垂閲戦�濓紙渚汼tep3鎶ヤ环浣跨敤锛�
+        function getDeliverableSurcharge() {
+            const pathName = finalPath === 'A' ? 'deliverableA' : 'deliverableB';
+            const checkboxes = document.querySelectorAll('input[name="' + pathName + '"]:checked');
+            const count = checkboxes.length;
+            return count > 1 ? (count - 1) * 1000 : 0;
+        }
+
+        // 鍒囨崲"鍏朵粬"浜や粯鐗╃殑涓婁紶鍖哄煙鏄剧ず
+        function toggleOtherUpload(checkbox, uploadId) {
+            const uploadArea = document.getElementById(uploadId);
+            if (uploadArea) {
+                uploadArea.style.display = checkbox.checked ? 'block' : 'none';
+            }
+        }
+
+        // ===== XLSX妯℃澘鐢熸垚鍑芥暟 =====
+        function generateXlsxTemplate() {
+            // 琛ㄥご鏁版嵁
+            const headers = ['搴忓彿', '宸ュ巶/鍘傚尯鍚嶇О锛堝繀濉�锛�', '8浣岰N Code锛堝繀濉�锛�', '浜у搧涓�鏂囧悕绉帮紙閫夊～锛�', '澶囨敞锛堥�夊～锛�'];
+            // 绀轰緥鏁版嵁
+            const examples = [
+                [1, '鎬诲巶', '72071100', '鏂瑰澂', ''],
+                [2, '鎬诲巶', '72142000', '铻虹汗閽�', '涓诲姏鍑哄彛浜у搧'],
+                [3, '绗�浜屽垎鍘�', '76042910', '閾濆瀷鏉�', ''],
+                [4, '绗�涓夊垎鍘傦紙閾搁�犺溅闂达級', '72071100', '鏂瑰澂', '鍚屼竴CN Code鍦ㄤ笉鍚屽伐鍘�'],
+                [5, '', '', '', '锛堢户缁�鎸夋牸寮忔坊鍔狅級']
+            ];
+            // 濉�鍐欒�存槑琛�
+            const noteRow = ['濉�鍐欒�存槑锛氭瘡琛屽～鍐欍�愪竴涓�宸ュ巶 + 涓�涓�浜у搧CN Code銆戠殑缁勫悎銆傚悓涓�宸ュ巶鏈夊�氫釜浜у搧璇峰垎澶氳�屽～鍐欙紙宸ュ巶鍚嶄繚鎸佷竴鑷村嵆鍙�锛夈��'];
+
+            // 鏋勫缓宸ヤ綔琛ㄦ暟鎹�
+            const wsData = [noteRow, headers, ...examples];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // 璁剧疆鍒楀��
+            ws['!cols'] = [
+                { wch: 6 },   // 搴忓彿
+                { wch: 28 },  // 宸ュ巶鍚嶇О
+                { wch: 22 },  // CN Code
+                { wch: 22 },  // 浜у搧鍚嶇О
+                { wch: 28 }   // 澶囨敞
+            ];
+
+            // 鍚堝苟绗�涓�琛岋紙璇存槑琛岋級
+            ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+
+            // 鍒涘缓宸ヤ綔绨垮苟瀵煎嚭
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'CBAM浜у搧娓呭崟妯℃澘');
+            XLSX.writeFile(wb, 'CBAM浜у搧娓呭崟鎵归噺瀵煎叆妯℃澘.xlsx');
+        }
+
+        function nextStep(step, isRecovering = false) {
+            // Validate step 1
+            if (step === 2) {
+                if (!isRecovering) {
+                    if (!document.getElementById('companyName').value) {
+                        alert('璇疯緭鍏ヤ紒涓氬悕绉帮紒');
+                        return;
+                    }
+
+                    if (activeTab === 'manual') {
+                        const factoryNodes = document.querySelectorAll('.product-cn-code');
+                        if (factoryNodes.length === 0) {
+                            alert('璇疯嚦灏戞坊鍔犱竴涓�宸ュ巶鍜屼竴涓�浜у搧锛�');
+                            return;
+                        }
+                        const firstCode = factoryNodes[0].value;
+                        if (!firstCode) {
+                            alert('褰撳墠宸ュ巶鏈�濉�鍐欎骇鍝� CN Code锛岃�疯ˉ鍏咃紒');
+                            return;
+                        }
+                    } else {
+                        if (document.getElementById('cnCodeFile').files.length === 0) {
+                            alert('璇峰厛涓婁紶鍖呭惈宸ュ巶涓庢捣鍏崇紪鐮佹竻鍗曠殑Excel鏂囦欢锛�');
+                            return;
+                        }
+                    }
+
+                    const processElem = document.querySelector('input[name="processLength"]:checked');
+                    const motivElem = document.querySelector('input[name="motivation"]:checked');
+
+                    if (!processElem) {
+                        alert('璇烽�夋嫨鐢熶骇宸ヨ壓绫诲瀷锛�');
+                        return;
+                    }
+
+                    if (processElem.value === 'short' && !document.querySelector('input[name="traceSupplier"]:checked')) {
+                        alert('瀵逛簬鐭�娴佺▼宸ヨ壓锛岃�峰嬀閫夋槸鍚﹁兘杩芥函渚涘簲鍟嗘暟鎹�锛�');
+                        return;
+                    }
+
+                    if (!motivElem) {
+                        alert('璇烽�夋嫨鏍稿績椹卞姩鍔涳紒');
+                        return;
+                    }
+                }
+
+                // 鏍稿績鍒ゅ畾閫昏緫 (Core Decision Logic based on SOP) - Should always run so resultContent doesn't end up empty!
+                const processElem = document.querySelector('input[name="processLength"]:checked');
+                const motivElem = document.querySelector('input[name="motivation"]:checked');
+
+                const isShort = processElem ? processElem.value === 'short' : false;
+                const traceObj = document.querySelector('input[name="traceSupplier"]:checked');
+                const canTrace = traceObj ? traceObj.value === 'yes' : false;
+                const motivation = motivElem ? motivElem.value : 'compliance';
+
+                let resultHtml = "";
+
+                const company = document.getElementById('companyName').value || "瀹㈡埛";
+                const safeCompany = escapeHTML(company);
+
+                // 鏂规�圓鐨勬潯浠讹細甯歌�勫饱绾︺�佹垨鑰呯煭娴佺▼涓旀棤娉曡拷婧�渚涘簲鍟�
+                if (motivation === 'compliance' || (isShort && !canTrace)) {
+                    finalPath = "A";
+                    resultHtml = `
+                        <div class="result-box result-path-a">
+                            <div class="result-title">馃幆 鍖归厤鏂规�堬細銆愭柟妗圓绮剧畝浼扮畻銆戝伐鍘傚唴閮ㄦ帓鏀炬牳绠� + 鍓嶄綋鏉愭枡缂虹渷鍊�/琛屼笟缁忛獙鍊�</div>
+                            <p><strong>灏婃暚鐨� ${safeCompany}璐熻矗浜猴細</strong></p>
+                            <p><strong>涓轰綍鍒嗛厤姝よ矾寰勶細</strong>鏍规嵁鎮ㄧ殑璇勪及閫夐」锛屽綋鍓嶇幇闃舵�垫渶閫傚悎鎮ㄤ紒涓氱殑鏂规�堜负鈥滅簿绠�浼扮畻鈥濄�傜敱浜庡�㈣�備緵搴旈摼婧�婧愬彈闄愭垨褰撳墠浠呴渶瑕嗙洊鍩虹��鐢虫姤鍙傛暟锛屾垜浠�寤鸿��閲囩敤姝ゆ柟妗堜互鏈�浼樺寲鎮ㄧ殑鏁翠綋鍚堣�勬垚鏈�锛屽拰蹇�閫熷搷搴斾笅娓告�х洘杩涘彛鍟嗙殑闇�姹傘��</p>
+                            <p><strong>鏍哥畻鍐呭�癸細</strong>鎶�鏈�鍥㈤槦灏嗕负璐靛徃璁炬柦鍒掑畾绯荤粺杈圭晫锛圫ystem Boundary锛夛紝璇嗗埆鎵�鏈夋帓鏀炬簮鍜屾簮娴侊紝鏀堕泦娲诲姩鏁版嵁锛圓ctivity Data锛夊苟鍖归厤鎺掓斁鍥犲瓙锛圗mission Factor锛夛紝鏈�缁堣�＄畻鍑烘瘡绉嶄骇鍝佺殑<strong>鐗瑰畾闅愬惈鎺掓斁閲忥紙Specific Embedded Emissions锛�</strong>銆�</p>
+                            
+                            <div class="deliverable-group">
+                                <div class="deliverable-group-title">馃摝 璇烽�夋嫨浜や粯鐗╋紙鍙�澶氶�夛級</div>
+                                <label class="deliverable-item checked">
+                                    <input type="checkbox" name="deliverableA" value="cbam_table" checked onchange="updateDeliverableUI(this); updateDeliverableSurcharge('A');">
+                                    <div>
+                                        <div class="deliverable-label">CBAM琛ㄦ牸</div>
+                                        <div class="deliverable-desc">涓嬫父瀹㈡埛鐗瑰畾瑕佹眰鐨凜BAM鏁版嵁琛ㄦ牸</div>
+                                    </div>
+                                </label>
+                                <label class="deliverable-item">
+                                    <input type="checkbox" name="deliverableA" value="cbam_report" onchange="updateDeliverableUI(this); updateDeliverableSurcharge('A');">
+                                    <div>
+                                        <div class="deliverable-label">CBAM鎶ュ憡</div>
+                                        <div class="deliverable-desc">寰佹敹鏈熷父瑙勪氦浠樻姤鍛�</div>
+                                    </div>
+                                </label>
+                                <label class="deliverable-item">
+                                    <input type="checkbox" name="deliverableA" value="other" onchange="updateDeliverableUI(this); updateDeliverableSurcharge('A'); toggleOtherUpload(this, 'deliverableUploadA');">
+                                    <div>
+                                        <div class="deliverable-label">鍏朵粬</div>
+                                        <div class="deliverable-desc">璇蜂笂浼犱笅娓稿�㈡埛瑕佹眰鐨勬ā鏉�</div>
+                                    </div>
+                                </label>
+                                <div class="deliverable-upload-area" id="deliverableUploadA" onclick="event.stopPropagation(); document.getElementById('deliverableFileA').click();">
+                                    馃搸 鐐瑰嚮涓婁紶涓嬫父瀹㈡埛瑕佹眰鐨勬ā鏉挎枃浠�
+                                    <div id="deliverableFileNameA" style="margin-top:4px; font-size:12px; color: var(--secondary-color);"></div>
+                                    <input type="file" id="deliverableFileA" style="display:none;" accept=".xlsx,.xls,.pdf,.doc,.docx" onchange="document.getElementById('deliverableFileNameA').textContent='宸查�夋嫨: '+this.files[0].name;">
+                                </div>
+                                <div class="deliverable-surcharge" id="surchargeA"></div>
+                                <div class="deliverable-note">馃挕 甯歌�勪氦浠樺寘鍚� 1 椤癸紝姣忓�炲姞 1 椤逛氦浠樼墿闇�鍔犳敹 楼1,000</div>
+                            </div>
+
+                            <div class="warning-text">
+                                鈿狅笍 閲嶈�佸悎瑙勯�庨櫓鎻愮ず锛�<br>
+                                <strong>鍏充簬缂虹渷鍊硷細</strong>鍓嶄綋鏉愭枡閲囩敤娆х洘缂虹渷鍊兼垨琛屼笟缁忛獙鍊煎湪褰撳墠闃舵�靛彲蹇�閫熷畬鎴愭牳绠椼�備絾闇�娉ㄦ剰锛�<br>
+                                路 缂虹渷鍊奸�氬父<strong>鏄捐憲楂樹簬瀹為檯鎺掓斁鍊�</strong>锛屼細瀵艰嚧鏈�缁堣�＄畻鍑虹殑浜у搧闅愬惈鎺掓斁鍋忛珮锛屽�炲姞瀹為檯纰崇◣鎴愭湰銆�<br>
+                                路 鑷�2027骞碈BAM姝ｅ紡寰佹敹鏈熻捣锛屾�х洘娉曡�勮�佹眰鑻ヨ�侀噰鐢ㄥ墠浣撴潗鏂欑殑瀹為檯闅愬惈鎺掓斁鏁版嵁锛屽繀椤�<strong>缁忚�ゅ彲鏍告煡鏈烘瀯鏍告煡</strong>锛屽惁鍒欏皢琚�寮哄埗閫傜敤鎯╃綒鎬ч粯璁ゅ�笺��<br>
+                                路 濡傚悗缁�甯屾湜闄嶄綆纰崇◣鎴愭湰鎴栧簲瀵规�ｅ紡鏍告煡锛屽缓璁�灏芥棭鎺ㄥ姩渚涘簲鍟嗗缓绔嬬洃娴嬭�″垝浠ュ強寮�灞曞疄闄呰�＄畻锛屼负27骞磋幏鍙栫粡鏍告煡鐨勫疄闄呮帓鏀炬暟鎹�鍋氬噯澶囥��
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('btnConfirmPath').innerText = "鎴戝凡鐭ユ倝浠ヤ笂椋庨櫓锛岃繘鍏ョ郴缁熻嚜鍔ㄦ姤浠�";
+                }
+                // 鏂规�圔鐨勬潯浠讹細闀挎祦绋嬨�佹垨涓轰簡搴斿�规牳鏌ャ�佹垨鑰呮効鎰忔帹鍔ㄤ緵搴斿晢瀹炴祴
+                else {
+                    finalPath = "B";
+                    resultHtml = `
+                        <div class="result-box result-path-b">
+                            <div class="result-title">馃専 鍖归厤鏂规�堬細銆愭柟妗圔鍚堣�勫疄绠椼�戝伐鍘傛暟鎹�瀹為檯璁＄畻+渚涘簲鍟嗗疄闄呮暟鎹�</div>
+                            <p><strong>灏婃暚鐨� ${safeCompany}璐熻矗浜猴細</strong></p>
+                            <p><strong>鏂规�堣�存槑锛�</strong>鏍规嵁鎮ㄧ殑濉�鎶ヤ俊鎭�锛岀郴缁熶负鎮ㄥ尮閰嶇殑鏍哥畻鏂规�堜负鈥斺�斿�硅吹鍙�<strong>鑷�鏈夎�炬柦锛堝伐鍘傦級</strong>鐨勭洿鎺ユ帓鏀句笌闂存帴鎺掓斁杩涜�屽疄娴嬫牳绠楃殑鍚屾椂锛岄渶鎺ㄥ姩涓婃父<strong>鍓嶄綋鏉愭枡锛堝師鏉愭枡锛変緵搴斿晢</strong>鎻愪緵鍏惰�炬柦鐨勫疄闄呮帓鏀炬暟鎹�锛堟垨鐢辨垜鍙稿崗鍔╀緵搴斿晢杩涜�屾牳绠楋級锛屼袱閮ㄥ垎鏁版嵁姹囨�诲悗锛屼负璐靛徃浜у搧璁＄畻瀹屾暣鐨勭壒瀹氶殣鍚�鎺掓斁閲忋��</p>
+                            <p><strong>鏍哥畻鍐呭�癸細</strong>鎶�鏈�鍥㈤槦灏嗗熀浜庤吹鍙搞�婄幆璇勬姤鍛娿�嬬瓑宸ョ▼璧勬枡锛屽垎鏋愭瘡鏉＄敓浜ц矾绾匡紙Production Route锛夛紝鍒掑畾绯荤粺杈圭晫锛屽缓绔嬪畬鏁寸殑鎺掓斁鐩戞祴鏂规硶瀛︼紝鏍哥畻璐靛徃璁炬柦鐨勭⒊鎺掓斁鏁版嵁銆傚悓鏃讹紝璐靛徃闇�鎺ㄥ姩鍓嶄綋鏉愭枡渚涘簲鍟嗘彁渚涘疄娴嬫暟鎹�鎴栧�旀墭鎴戝徃瀵逛緵搴斿晢杩涜�岀嫭绔嬫牳绠椼��</p>
+                            
+                            <div class="deliverable-group">
+                                <div class="deliverable-group-title">馃摝 璇烽�夋嫨浜や粯鐗╋紙鍙�澶氶�夛級</div>
+                                <label class="deliverable-item checked">
+                                    <input type="checkbox" name="deliverableB" value="cbam_report" checked onchange="updateDeliverableUI(this); updateDeliverableSurcharge('B');">
+                                    <div>
+                                        <div class="deliverable-label">CBAM鎶ュ憡</div>
+                                        <div class="deliverable-desc">寰佹敹鏈熷父瑙勪氦浠樻姤鍛�</div>
+                                    </div>
+                                </label>
+                                <label class="deliverable-item">
+                                    <input type="checkbox" name="deliverableB" value="carbon_cost_report" onchange="updateDeliverableUI(this); updateDeliverableSurcharge('B');">
+                                    <div>
+                                        <div class="deliverable-label">CBAM纰虫垚鏈�瀵规瘮鎶ュ憡</div>
+                                        <div class="deliverable-desc">鐢ㄤ簬閲嶇偣渚涘簲鍟嗚瘑鍒�锛岄�勪及27骞寸⒊鎴愭湰锛屼负浜у搧浠锋牸鎴樼暐鍋氬弬鑰�</div>
+                                    </div>
+                                </label>
+                                <label class="deliverable-item">
+                                    <input type="checkbox" name="deliverableB" value="other" onchange="updateDeliverableUI(this); updateDeliverableSurcharge('B'); toggleOtherUpload(this, 'deliverableUploadB');">
+                                    <div>
+                                        <div class="deliverable-label">鍏朵粬</div>
+                                        <div class="deliverable-desc">璇蜂笂浼犱笅娓稿�㈡埛瑕佹眰鐨勬ā鏉�</div>
+                                    </div>
+                                </label>
+                                <div class="deliverable-upload-area" id="deliverableUploadB" onclick="event.stopPropagation(); document.getElementById('deliverableFileB').click();">
+                                    馃搸 鐐瑰嚮涓婁紶涓嬫父瀹㈡埛瑕佹眰鐨勬ā鏉挎枃浠�
+                                    <div id="deliverableFileNameB" style="margin-top:4px; font-size:12px; color: var(--secondary-color);"></div>
+                                    <input type="file" id="deliverableFileB" style="display:none;" accept=".xlsx,.xls,.pdf,.doc,.docx" onchange="document.getElementById('deliverableFileNameB').textContent='宸查�夋嫨: '+this.files[0].name;">
+                                </div>
+                                <div class="deliverable-surcharge" id="surchargeB"></div>
+                                <div class="deliverable-note">馃挕 甯歌�勪氦浠樺寘鍚� 1 椤癸紝姣忓�炲姞 1 椤逛氦浠樼墿闇�鍔犳敹 楼1,000</div>
+                            </div>
+
+                            <div style="margin-top:12px; padding: 10px; background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; font-size: 13px; color: #92400e; line-height: 1.6;">
+                                <strong>馃搶 鏈�娆℃姤浠疯寖鍥磋�存槑锛�</strong><br>
+                                路 褰撳墠鎶ヤ环<strong>浠呭寘鍚�璐靛徃鑷�鏈夎�炬柦锛堝伐鍘傦級</strong>鐨勯殣鍚�鎺掓斁鏍哥畻鏈嶅姟璐广��<br>
+                                路 <strong>涓嶅寘鍚�锛�</strong>涓婃父鍓嶄綋鏉愭枡渚涘簲鍟嗙殑鏍哥畻璐圭敤锛堟牴鎹�渚涘簲鍟嗘暟閲忓拰浜у搧绫诲埆鍙﹁�屾姤浠凤級銆佸悗缁�鐩戞祴璁″垝缂栧埗璐圭敤銆佷互鍙婄��涓夋柟鏍告煡璐圭敤銆�<br>
+                                路 <strong>2027骞存牳鏌ヨ�佹眰锛�</strong>鑻ヨ�侀�氳繃娆х洘CBAM姝ｅ紡鏍告煡锛岃吹鍙稿拰鍓嶄綋鏉愭枡渚涘簲鍟嗗潎椤诲缓绔嬬�﹀悎娉曡�勯檮浠禝I瑕佹眰鐨�<strong>鐩戞祴璁″垝锛圡onitoring Plan锛�</strong>锛屽苟鑾峰緱缁忚�ゅ彲鏍告煡鏈烘瀯锛圓ccredited Verifier锛夌殑鏍告煡鎶ュ憡銆傜洃娴嬭�″垝鍜屾牳鏌ヤ负鐙�绔嬫湇鍔￠」鐩�銆�
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('btnConfirmPath').innerText = "纭�璁ゆ柟妗堬紝杩涘叆绯荤粺鑷�鍔ㄦ姤浠�";
+                }
+
+                document.getElementById('resultContent').innerHTML = resultHtml;
+            }
+
+            // Step 3: Quote Generation Logic
+            if (step === 3) {
+                const processElem = document.querySelector('input[name="processLength"]:checked');
+                const isShort = processElem.value === 'short';
+
+                let totalCodes = 0;
+                let uniqueCodesList = []; // 淇�澶岯ug锛氬�氫釜宸ュ巶閲嶅�嶄唬鐮佸簲褰撳�備綍鏀惰垂锛熸殏鎸夋�昏緭鍏ュ幓閲嶈�＄畻
+
+                if (activeTab === 'manual') {
+                    // 寰�鐜�鏀堕泦鎵�鏈夌殑CN Code
+                    let combinedVal = "";
+                    document.querySelectorAll('.product-cn-code').forEach(input => {
+                        combinedVal += input.value + " ";
+                    });
+
+                    const codesArr = combinedVal.split(/[^\d]+/g).filter(c => c.trim().length >= 4);
+                    // 杩囨护鍑虹湡姝ｅ彈鎺х殑浠ｇ爜
+                    codesArr.forEach(c => {
+                        if (checkIsControlled(c) && !uniqueCodesList.includes(c)) {
+                            uniqueCodesList.push(c);
+                        }
+                    });
+                    totalCodes = uniqueCodesList.length;
+
+                } else {
+                    // 濡傛灉鏄�涓婁紶鏂囦欢锛岀敱浜庢棤娉曠函鍓嶇��瑙ｆ瀽Excel锛岃繖閲屽仛涓�鍏滃簳榛樿��1
+                    totalCodes = 1;
+                }
+
+                // 濡傛灉涓虹┖锛岃嚦灏戠畻1涓�璧锋�ユ姤浠�
+                if (totalCodes === 0) totalCodes = 1;
+
+                // 鍗曚环鏍规嵁 SOP: 鐭�娴佺▼ 6360锛� 闀挎祦绋� 10600
+                const unitPrice = isShort ? 6360 : 10600;
+                const deliverableSurcharge = getDeliverableSurcharge();
+                const totalPrice = unitPrice * totalCodes + deliverableSurcharge;
+
+                document.getElementById('quoteProcessType').innerText = isShort ? '鐭�娴佺▼ (绾�鏈烘��/缁勮��)' : '闀挎祦绋� (鐔旂偧/鍖栧伐/澶嶆潅鐩稿彉)';
+                document.getElementById('quoteUnitPrice').innerText = unitPrice;
+                document.getElementById('quoteCodeCount').innerText = activeTab === 'manual' ? totalCodes : "1 (妫�娴嬪埌鎮ㄤ笂浼犱簡娓呭崟闄勪欢锛屽凡瑙﹀彂绯荤粺棰勫畾閲戞ā寮忥紝鏈�缁堟�绘暟浠ユ硶鍔″�℃牳闄勪欢寰楀嚭涓哄噯)";
+
+                // 鏄剧ず浜や粯鐗╅檮鍔犺垂
+                if (deliverableSurcharge > 0) {
+                    document.getElementById('quoteSurchargeRow').style.display = 'list-item';
+                    document.getElementById('quoteSurcharge').innerText = deliverableSurcharge.toLocaleString();
+                } else {
+                    document.getElementById('quoteSurchargeRow').style.display = 'none';
+                }
+
+                // 鏍煎紡鍖栦环鏍硷紝鍔犲崈鍒嗕綅
+                document.getElementById('quoteTotalPrice').innerText = totalPrice.toLocaleString();
+
+                // 鍒ゆ柇鏄�鍚﹂渶瑕佽拷鍔犱緵搴斿晢杩芥函鐨勯�勮�﹁�存槑
+                const traceObj = document.querySelector('input[name="traceSupplier"]:checked');
+                const canTrace = traceObj ? traceObj.value === 'yes' : false;
+
+                if (canTrace) {
+                    document.getElementById('quoteSupplierNote').style.display = 'block';
+                } else {
+                    document.getElementById('quoteSupplierNote').style.display = 'none';
+                }
+            }
+
+            // Update UI
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+            // 濡傛灉灏濊瘯鎭㈠�嶅埌鏌愪竴姝ョ殑鏃跺�欙紝纭�淇濅箣鍓嶇粡杩囩殑鎵�鏈夋�ラ�ょ浉鍏崇殑 DOM 琚�璧嬩簣姝ｇ‘鐨勭姸鎬�
+            const targetStepEl = document.getElementById('step' + step);
+            if (targetStepEl) {
+                targetStepEl.classList.add('active');
+            }
+
+            // Save state (濡傛灉鏄�鎭㈠�嶈繃绋嬪垯涓嶉噸澶嶈�嗗啓)
+            if (!isRecovering) {
+                saveProgress(step);
+            }
+
+            // Update progress indicators
+            document.querySelectorAll('.progress-step').forEach((el, index) => {
+                if (index < step - 1) {
+                    el.classList.add('completed');
+                    el.classList.remove('active');
+                } else if (index === step - 1) {
+                    el.classList.add('active');
+                    el.classList.remove('completed');
+                } else {
+                    el.classList.remove('active');
+                    el.classList.remove('completed');
+                }
+            });
+        }
+
+        function prevStep(step) {
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+            document.getElementById('step' + step).classList.add('active');
+
+            // Back 涔熷彲浠ヤ繚瀛樿繘搴�
+            saveProgress(step);
+
+            // Update progress indicators
+            document.querySelectorAll('.progress-step').forEach((el, index) => {
+                if (index < step - 1) {
+                    el.classList.add('completed');
+                    el.classList.remove('active');
+                } else if (index === step - 1) {
+                    el.classList.add('active');
+                    el.classList.remove('completed');
+                } else {
+                    el.classList.remove('active');
+                    el.classList.remove('completed');
+                }
+            });
+        }
+
+        // ============ Supabase 鍒濆�嬪寲锛坅non key 瀹夊叏浣跨敤锛岄厤鍚圧LS绛栫暐锛� ============
+        const SUPABASE_URL = 'https://psujmrphmgixrtczaisf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdWptcnBobWdpeHJ0Y3phaXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MTE4ODMsImV4cCI6MjA4OTI4Nzg4M30.W6TIttAzEGwyIQukZIxikckCVTZOup0QYRMSEBD4CeE';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function submitQuote(type) {
+            // 淇濆瓨褰撳墠杩涘害
+            saveProgress(3);
+
+            const company = document.getElementById('companyName').value;
+            const sales = urlSales || "鏈�鎸囧畾涓氬姟鍛�";
+            const quoteTotal = document.getElementById('quoteTotalPrice').innerText;
+            const refNumber = "CBAM-" + new Date().getFullYear() + "-" + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+
+            const currentPathName = finalPath === "A" ? "鏂规�圓-绮剧畝浼扮畻" : "鏂规�圔-鍚堣�勫疄绠�";
+            const submitStatus = type === 'special' ? "宸ヨ壓瀛樺湪鐗规畩鎯呭喌锛岃�锋眰涓氬姟鍛樺�嶆牳娌熼��" : "瀹㈡埛宸茶嚜涓荤‘璁ゆ姤浠峰崟";
+
+            // 鏀堕泦宸ュ巶鍜屼骇鍝佹暟鎹�
+            const factoriesData = [];
+            document.querySelectorAll('.factory-block').forEach((block, idx) => {
+                const products = [];
+                block.querySelectorAll('.product-cn-code').forEach(input => {
+                    if (input.value.trim()) products.push(input.value.trim());
+                });
+                factoriesData.push({ factory_index: idx + 1, cn_codes: products });
+            });
+
+            // 鏀堕泦浜や粯鐗╅�夋嫨
+            const deliverables = [];
+            const deliverableName = finalPath === 'A' ? 'deliverableA' : 'deliverableB';
+            document.querySelectorAll(`input[name="${deliverableName}"]:checked`).forEach(cb => {
+                deliverables.push(cb.value);
+            });
+
+            // 鏀堕泦宸ヨ壓鍜屼緵搴斿晢杩芥函淇℃伅
+            const processElem = document.querySelector('input[name="processLength"]:checked');
+            const traceElem = document.querySelector('input[name="traceSupplier"]:checked');
+            const motivElem = document.querySelector('input[name="motivation"]:checked');
+
+            // 缁勮�呮彁浜ゆ暟鎹�
+            const formData = {
+                sales_name: sales,
+                company_name: company,
+                factories: factoriesData,
+                process_type: processElem ? processElem.value : null,
+                trace_supplier: traceElem ? traceElem.value : null,
+                motivation: motivElem ? motivElem.value : null,
+                matched_path: currentPathName,
+                quote_total: quoteTotal + "鍏�",
+                submit_type: submitStatus,
+                ref_number: refNumber,
+                deliverables: deliverables.join(', '),
+                submission_data: {
+                    "涓氬姟鍛�": sales,
+                    "瀹㈡埛浼佷笟鍚嶇О": company,
+                    "寤鸿��鍖归厤璺�寰�": currentPathName,
+                    "鐢熸垚鐨勯�勪及鎬讳环": quoteTotal + "鍏�",
+                    "绛剧害鐘舵��": submitStatus,
+                    "椤圭洰缂栧彿": refNumber,
+                    "宸ュ巶淇℃伅": factoriesData,
+                    "浜や粯鐗�": deliverables,
+                    "鎻愪氦鏃堕棿": new Date().toISOString()
+                }
+            };
+
+            console.log("姝ｅ湪鎻愪氦鏁版嵁鍒� Supabase 浜戠��鏁版嵁搴�...", formData);
+
+            // ===== 鍐欏叆 Supabase 鏁版嵁搴� =====
+            try {
+                const { data, error } = await supabaseClient
+                    .from('cbam_submissions')
+                    .insert([formData]);
+
+                if (error) {
+                    console.error('Supabase 鍐欏叆澶辫触:', error);
+                    alert('鏁版嵁淇濆瓨鍑虹幇闂�棰橈紝浣嗘偍鐨勬姤浠峰凡璁板綍鍦ㄦ湰鍦般�傝�疯仈绯讳笟鍔″憳纭�璁ゃ�俓n閿欒��淇℃伅: ' + error.message);
+                } else {
+                    console.log('鉁� 鏁版嵁宸叉垚鍔熶繚瀛樺埌 Supabase 浜戠��鏁版嵁搴擄紒', data);
+                    // 鍚屾�ユ帹閫佸埌閽夐拤閫氱煡锛堣�╀笟鍔″憳瀹炴椂鏀跺埌鎻愰啋锛�
+                    syncToDingTalk(formData);
+                }
+            } catch (e) {
+                console.error('缃戠粶寮傚父锛屾棤娉曡繛鎺ュ埌浜戠��鏁版嵁搴�:', e);
+                // 鍗充娇缃戠粶寮傚父涔熶笉闃诲�炵敤鎴锋祦绋嬶紝鏁版嵁鍦╨ocalStorage涓�宸叉湁澶囦唤
+                // 灏濊瘯鐩存帴閫氳繃閽夐拤鎺ㄩ��
+                syncToDingTalk(formData);
+            }
+
+            // 鍒囨崲鍒版垚鍔熺晫闈�
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+
+            let successTitle = type === 'special' ? "閫氱煡宸蹭笅鍙�" : "鎶ヤ环宸茬‘璁�";
+            let successMessage = type === 'special'
+                ? "涓氬姟鍛� <strong>" + sales + "</strong> 宸叉敹鍒版偍鐨勬彁绀猴紝灏嗗敖蹇�涓庢偍鑱旂郴浜嗚В鐗规畩宸ヨ壓缁嗚妭銆�"
+                : "鎮ㄧ殑棰勪及鎶ヤ环纭�璁ゅ崟宸叉垚鍔熷缓妗ｄ繚瀛樸�備笟鍔′笓灞為【闂� <strong>" + sales + "</strong> 浼氶�氳繃浼佷笟寰�淇″悜鎮ㄥ彂閫佹�ｅ紡鐨勫悎鍚屾ā鏉匡紝璇锋偍鑰愬績绛夊緟銆�";
+
+            let successHtml = `
+                <div style="font-size: 64px; color: var(--accent-color); margin-bottom: 20px;">鉁�</div>
+                <h2 style="color: var(--primary-color);">${successTitle}</h2>
+                <p style="color: #64748b; margin-bottom: 30px; font-size: 16px;">
+                    灏婃暚鐨� <strong>${escapeHTML(company)}</strong>璐熻矗浜猴紝鎮ㄧ殑椤圭洰妗ｆ�堝垵姝ユ祦杞�宸蹭繚瀛樸�傞」鐩�缂栧彿涓猴細<strong>${refNumber}</strong><br><br>
+                    ${successMessage}<br><br>
+                    <span style="font-size: 13px; color: #94a3b8;">馃摗 鏁版嵁宸插悓姝ヨ嚦浜戠��鏁版嵁搴�</span>
+                </p>
+                <button type="button" class="btn btn-secondary" onclick="location.reload()">閲嶆柊鍥炲埌棣栭〉濉�鎶�</button>
+            `;
+            document.getElementById('stepSuccess').innerHTML = successHtml;
+            document.getElementById('stepSuccess').classList.add('active');
+
+            // 鏍囪�版墍鏈夋�ラ�ゅ畬鎴�
+            document.querySelectorAll('.progress-step').forEach(el => {
+                el.classList.add('completed');
+                el.classList.remove('active');
+            });
+        }
+
+        // ============ 閽夐拤鏁版嵁鍚屾�ワ紙閫氳繃Webhook鎺ㄩ�侀�氱煡锛� ============
+        // ============ 钉钉数据同步（通过Webhook推送通知 + @业务员手机号） ============
+
+        async function syncToDingTalk(formData) {
+
+            try {
+
+                // 构建钉钉消息内容
+
+                const msgContent = [
+
+                    `📋 **CBAM提资分流 - 新客户线索**`,
+
+                    ``,
+
+                    `👤‍💼 业务员：${formData.sales_name}`,
+
+                    `🏢 客户企业：${formData.company_name}`,
+
+                    `📌 匹配方案：${formData.matched_path}`,
+
+                    `💵 预估报价：${formData.quote_total}`,
+
+                    `📝 签约状态：${formData.submit_type}`,
+
+                    `🔖 项目编号：${formData.ref_number}`,
+
+                    `📦 交付物：${formData.deliverables || '未选择'}`,
+
+                    `⏰ 提交时间：${new Date().toLocaleString('zh-CN')}`,
+
+                    ``,
+
+                    `🔗 [查看完整数据表](https://alidocs.dingtalk.com/i/nodes/bva6QBXJwav5yvPNFQNXgoXMWn4qY5Pr)`,
+
+                ].join('\n');
+
+
+
+                // 钉钉群机器人 Webhook 配置
+
+                // 注意：如需真正推送到钉钉群，请在此处配置 Webhook URL
+
+                const DINGTALK_WEBHOOK = '';  // TODO: 请填入钉钉群机器人Webhook地址
+
+
+
+                if (DINGTALK_WEBHOOK) {
+
+                    // 构建钉钉消息体，通过手机号 @业务员
+
+                    const payload = {
+
+                        msgtype: 'markdown',
+
+                        markdown: {
+
+                            title: 'CBAM新客户线索',
+
+                            text: msgContent + (urlPhone ? `\n\n@${urlPhone}` : '')
+
+                        },
+
+                        at: {
+
+                            atMobiles: urlPhone ? [urlPhone] : [],
+
+                            isAtAll: false
+
+                        }
+
+                    };
+
+
+
+                    try {
+
+                        const resp = await fetch(DINGTALK_WEBHOOK, {
+
+                            method: 'POST',
+
+                            headers: { 'Content-Type': 'application/json' },
+
+                            body: JSON.stringify(payload)
+
+                        });
+
+                        const result = await resp.json();
+
+                        console.log('📨 钉钉推送结果:', result);
+
+                    } catch (webhookErr) {
+
+                        console.error('钉钉Webhook推送失败:', webhookErr);
+
+                    }
+
+                } else {
+
+                    console.log('📢 钉钉推送数据（Webhook未配置，仅输出到控制台）:', msgContent);
+
+                    console.log('💡 提示: 如需启用钉钉机器人推送，请在 syncToDingTalk 函数中配置 DINGTALK_WEBHOOK URL');
+
+                }
+
+
+
+                // 将数据暂存到 localStorage 备份
+
+                const existingData = JSON.parse(localStorage.getItem('cbam_submissions_backup') || '[]');
+
+                existingData.push({
+
+                    ...formData,
+
+                    sales_phone: urlPhone || '',
+
+                    local_timestamp: new Date().toISOString()
+
+                });
+
+                localStorage.setItem('cbam_submissions_backup', JSON.stringify(existingData));
+
+                console.log('💾 数据已备份到本地 localStorage');
+
+            } catch (e) {
+
+                console.error('钉钉同步异常:', e);
+
+            }
+
+        }
+
+    </script>
+</body>
+
+</html>
