@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- Supabase 云端数据持久化集成版 -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欧盟CBAM隐含碳排放核算报价系统</title>
+    <!-- 引入 Supabase JS SDK（用于云端数据持久化） -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #0f172a;
+            --secondary-color: #35a771;
+            /* REACH24H Green */
+            --accent-color: #f59e0b;
+            --background-color: #f8fafc;
+            --text-color: #334155;
+            --border-color: #e2e8f0;
+            --error-color: #dc2626;
+            --warning-color: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 10px 15px -5px rgba(0, 0, 0, 0.03);
+            margin: 20px;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 30px;
+            font-size: 15px;
+        }
+
+        .step-container {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .step-container.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .radio-option:hover {
+            border-color: var(--secondary-color);
+            background-color: #f0fdf4;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-top: 4px;
+            margin-right: 12px;
+        }
+
+        .radio-label {
+            font-weight: 500;
+        }
+
+        .radio-desc {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            box-shadow: 0 4px 6px -1px rgba(53, 167, 113, 0.2), 0 2px 4px -1px rgba(53, 167, 113, 0.1);
+        }
+
+        .btn:hover {
+            background-color: #2b8b5e;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 10px -1px rgba(53, 167, 113, 0.3), 0 2px 4px -1px rgba(53, 167, 113, 0.15);
+        }
+
+        .btn-secondary {
+            background-color: #f1f5f9;
+            color: #475569;
+            margin-right: 12px;
+            width: auto;
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e2e8f0;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 32px;
+        }
+
+        .result-box {
+            background-color: #f8fafc;
+            border-left: 4px solid var(--secondary-color);
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 24px;
+        }
+
+        .result-path-a {
+            border-left-color: var(--warning-color);
+            background-color: #fffbeb;
+        }
+
+        .result-path-b {
+            border-left-color: var(--accent-color);
+            background-color: #ecfdf5;
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .warning-text {
+            color: var(--error-color);
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 10px;
+            background-color: #fef2f2;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #fecaca;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 8px;
+            background-color: #fafafa;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: var(--secondary-color);
+            background-color: #eff6ff;
+        }
+
+        .upload-icon {
+            font-size: 32px;
+            color: #94a3b8;
+            margin-bottom: 10px;
+        }
+
+        .product-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .product-item input {
+            flex: 1;
+            margin-bottom: 0 !important;
+        }
+
+        .btn-remove-product {
+            background-color: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 44px;
+        }
+
+        .btn-remove-product:hover {
+            background-color: #fee2e2;
+            color: var(--error-color);
+            border-color: #fecaca;
+        }
+
+        .add-product-btn {
+            background-color: transparent;
+            color: var(--secondary-color);
+            border: 1px dashed var(--secondary-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-bottom: 15px;
+            transition: background 0.2s;
+        }
+
+        .add-product-btn:hover {
+            background-color: #ecfdf5;
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--border-color);
+            z-index: 1;
+        }
+
+        .factory-box {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .factory-box:hover {
+            background-color: #ffffff;
+            box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+            border-color: #cbd5e1;
+            transform: translateY(-2px);
+        }
+
+        .remove-factory {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: var(--error-color);
+            cursor: pointer;
+            font-size: 14px;
+            background: none;
+            border: none;
+        }
+
+        .add-factory-btn {
+            background-color: transparent;
+            color: var(--secondary-color);
+            border: 1px dashed var(--secondary-color);
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-block;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .add-factory-btn:hover {
+            background-color: #eff6ff;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .tab.active {
+            color: var(--secondary-color);
+            border-bottom-color: var(--secondary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .progress-step {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: white;
+            border: 2px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #94a3b8;
+            z-index: 2;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            font-size: 15px;
+        }
+
+        .progress-step.active {
+            border-color: var(--secondary-color);
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .progress-step.completed {
+            border-color: var(--accent-color);
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        /* 隐藏的文件输入框 */
+        input[type="file"] {
+            display: none;
+        }
+
+        /* 管理员入口 */
+        .admin-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-size: 12px;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .admin-link:hover {
+            color: #64748b;
+        }
+
+        /* 下载链接样式 */
+        .download-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .download-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .download-btn {
+            background-color: #f1f5f9;
+            color: var(--secondary-color);
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .download-btn:hover {
+            background-color: #e2e8f0;
+        }
+        .deliverable-group {
+            margin-top: 16px;
+            padding: 16px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .deliverable-group-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        .deliverable-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .deliverable-item:hover {
+            border-color: var(--secondary-color);
+            background-color: #f0fdf4;
+        }
+        .deliverable-item.checked {
+            border-color: var(--secondary-color);
+            background-color: #ecfdf5;
+        }
+        .deliverable-item input[type="checkbox"] {
+            margin-top: 3px;
+            margin-right: 10px;
+            accent-color: var(--secondary-color);
+            width: 16px;
+            height: 16px;
+        }
+        .deliverable-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1e293b;
+        }
+        .deliverable-desc {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .deliverable-note {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 6px;
+        }
+        .deliverable-surcharge {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-top: 8px;
+            padding: 6px 10px;
+            background: #f0fdf4;
+            border-radius: 4px;
+            display: none;
+        }
+        .deliverable-upload-area {
+            display: none;
+            margin-top: 8px;
+            margin-left: 26px;
+            padding: 12px;
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 13px;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+        .deliverable-upload-area:hover {
+            border-color: var(--secondary-color);
+            background: #f0fdf4;
+        }
+    </style>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+    <div class="container" id="sales-portal" style="display: none; text-align: center;">
+        <div style="margin-bottom: 20px;">
+            <h2 style="color: var(--secondary-color); font-weight: 800; margin: 0; font-size: 24px;">REACH24H</h2>
+            <div style="font-size: 12px; color: #64748b; letter-spacing: 2px;">杭州瑞欧科技有限公司</div>
+        </div>
+        <h1>CBAM 提资分流系统 - 业务员专用发单口</h1>
+        <p class="subtitle" style="margin-bottom: 30px;">请先填写基本信息，为您负责的客户生成专属填报链接。</p>
+
+        <div class="form-group" style="text-align: left;">
+            <label>您的姓名 (业务员)</label>
+            <input type="text" id="salesName" placeholder="请输入您的姓名" required style="box-shadow: none;">
+        </div>
+
+        <div class="form-group" style="text-align: left;">
+            <label>对方客户企业名称</label>
+            <input type="text" id="salesCompanyName" placeholder="请输入将要发送给的客户公司全称" required style="box-shadow: none;">
+        </div>
+
+        <button type="button" class="btn" style="width: 100%; margin-top: 10px;"
+            onclick="generateCustomerLink()">生成并复制专属链接</button>
+
+        <div id="generatedLinkArea"
+            style="display: none; margin-top: 30px; text-align: left; padding: 20px; background: #f8fafc; border: 1px dashed var(--secondary-color); border-radius: 8px;">
+            <p style="margin-top: 0; font-weight: bold; color: var(--primary-color);">链接生成成功！请直接粘贴发送给客户微信：</p>
+            <textarea id="generatedLink" rows="5"
+                style="width: 100%; font-size: 14px; background: white; cursor: text; line-height: 1.5;"
+                readonly></textarea>
+        </div>
+
+        <div style="margin-top:20px; text-align: left; font-size: 13px; color: #64748b;">
+            <p><strong>💡 逻辑说明：</strong>客户打开链接后，填表首页不再需要手动输入企业名称，系统会自动记录对应的业务员是谁，并在成功后推送钉钉AI表格。</p>
+        </div>
+    </div>
+
+    <div class="container" id="customer-portal" style="display: none;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: var(--secondary-color); font-weight: 800; margin: 0; font-size: 24px;">REACH24H</h2>
+            <div style="font-size: 12px; color: #64748b; letter-spacing: 2px;">杭州瑞欧科技有限公司</div>
+        </div>
+        <h1>欧盟CBAM隐含碳排放核算报价系统</h1>
+        <p class="subtitle">请准确填写以下信息，系统将为您匹配最适合的CBAM隐含排放核算方案并生成报价。</p>
+
+        <div class="progress-bar">
+            <div class="progress-step active" id="indicator-1">1</div>
+            <div class="progress-step" id="indicator-2">2</div>
+            <div class="progress-step" id="indicator-3">3</div>
+        </div>
+
+        <form id="assessmentForm">
+            <!-- Step 1: 基础调查 -->
+            <div class="step-container active" id="step1">
+                <!-- 客户企业名称 现在被隐藏了，由URL参数直接带入 -->
+                <div class="form-group" style="display:none;">
+                    <label>隐形带入的客户企业名称</label>
+                    <input type="text" id="companyName" required placeholder="请输入完整的企业名称">
+                </div>
+
+                <div class="form-group">
+                    <label>1. 工厂及相应的8位产品海关编码 (8-Digit CN Code)</label>
+                    <div
+                        style="color: #dc2626; font-weight: bold; padding: 12px; background: #fef2f2; border-left: 4px solid #dc2626; border-radius: 4px; margin-bottom: 15px; font-size: 14px; line-height: 1.6;">
+                        🚨 【风险提示】请务必谨慎选择精确的 CN Code，保证您的选择和实际出口产品完全一致！<br>
+                        若 CN Code 选择或归类错误，将可能直接导致 2027 年正式落地期的排放报告无法通过核查机构的核查。如果您对产品的具体 CN Code
+                        划分不确定，强烈建议寻求专业报关单位进行精准划分。
+                    </div>
+                    <span class="help-text" style="color:#f59e0b; margin-bottom: 10px;">
+                        【填写说明】：如果有多个工厂生产不同的受控产品，请分别独立添加，可在每个工厂下新增多个产品，也可新增工厂。
+                    </span>
+
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('manual', this)">手动填报工厂与编码</div>
+                        <div class="tab" onclick="switchTab('upload', this)">批量导入表格 (工厂及物料极多时)</div>
+                    </div>
+
+                    <div id="tab-manual" class="tab-content active">
+                        <div id="factoryContainer">
+                            <!-- 默认展示一个工厂的填写框 -->
+                            <div class="factory-box">
+                                <span class="factory-title"
+                                    style="font-weight: bold; color: #475569; margin-bottom: 8px; display:inline-block;">工厂/厂区
+                                    1</span>
+                                <input type="text" class="factory-name" placeholder="请输入工厂名称（如：总厂/一车间）" required
+                                    style="margin-bottom: 15px;">
+
+                                <div class="products-container">
+                                    <div class="product-item">
+                                        <input type="text" class="product-cn-code" list="cnCodeList"
+                                            placeholder="请输入或选择8位CN Code (支持下拉联想)" required>
+                                    </div>
+                                </div>
+                                <button type="button" class="add-product-btn" onclick="addProduct(this)">+ 新增产品 (CN
+                                    Code)</button>
+                            </div>
+                        </div>
+                        <button type="button" class="add-factory-btn" onclick="addFactory()">+ 添加下一个独立工厂</button>
+                        <div id="cnCodeResult"
+                            style="margin-top: 5px; display: none; padding: 10px; border-radius: 6px; font-size: 14px;">
+                        </div>
+                    </div>
+
+                    <div id="tab-upload" class="tab-content">
+                        <p class="help-text" style="color: var(--text-color); font-weight: 500; margin-bottom: 12px;">
+                            若贵公司存在大量工厂及繁杂的产品型号，可直接下载表格模板，批量收集各工厂对应的 CN Code 明细导入。</p>
+
+                        <!-- 模板下载区 -->
+                        <div
+                            style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                            <div
+                                style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 28px;">📋</span>
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 15px; color: #166534;">企业工厂及产品CN
+                                            Code明细收集表</div>
+                                        <div style="font-size: 12px; color: #64748b;">XLSX格式 · 适用于多工厂、多产品的批量填报</div>
+                                    </div>
+                                </div>
+                                <a id="downloadTemplateBtn" href="javascript:void(0)"
+                                    style="background: var(--secondary-color); color: white; padding: 8px 18px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; white-space: nowrap; transition: background 0.2s;">⬇
+                                    下载模板</a>
+                            </div>
+
+                            <div style="font-size: 13px; color: #475569; line-height: 1.7; margin-bottom: 14px;">
+                                <strong>📝 填写说明：</strong>每行填写<strong style="color:#dc2626;">一个工厂 + 一个产品CN
+                                    Code</strong>的组合。<br>
+                                · 同一个工厂有多个产品 → 工厂名相同，分多行填写不同CN Code<br>
+                                · 同一个产品在多个工厂生产 → CN Code相同，分多行填写不同工厂名<br>
+                                · 产品中文名和备注为选填，帮助瑞欧核对准确性
+                            </div>
+
+                            <!-- 内嵌预览表格 -->
+                            <div style="overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <table
+                                    style="width: 100%; border-collapse: collapse; font-size: 13px; background: white;">
+                                    <thead>
+                                        <tr style="background: #f1f5f9;">
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                序号</th>
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                工厂/厂区名称 <span style="color:#dc2626;">*</span></th>
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                8位CN Code <span style="color:#dc2626;">*</span></th>
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                产品中文名称（选填）</th>
+                                            <th
+                                                style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">
+                                                备注（选填）</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr style="background: #fffbeb;">
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                1</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
+                                                总厂</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: var(--secondary-color); font-weight: 700;">
+                                                72071100</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                方坯</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                2</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
+                                                总厂</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: var(--secondary-color); font-weight: 700;">
+                                                72142000</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                螺纹钢</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                主力出口产品</td>
+                                        </tr>
+                                        <tr style="background: #f0f9ff;">
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                3</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
+                                                第二分厂</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: var(--secondary-color); font-weight: 700;">
+                                                76042910</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                铝型材</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                4</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
+                                                第三分厂（铸造车间）</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: var(--secondary-color); font-weight: 700;">
+                                                72071100</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                方坯</td>
+                                            <td
+                                                style="padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #64748b;">
+                                                同一CN Code在不同工厂</td>
+                                        </tr>
+                                        <tr style="color: #94a3b8; font-style: italic;">
+                                            <td style="padding: 8px 14px; color: #94a3b8;">...</td>
+                                            <td style="padding: 8px 14px;">（继续添加）</td>
+                                            <td style="padding: 8px 14px;"></td>
+                                            <td style="padding: 8px 14px;"></td>
+                                            <td style="padding: 8px 14px;"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="text-align: right; margin-top: 8px; font-size: 11px; color: #94a3b8;">* 标注 <span
+                                    style="color:#dc2626;">*</span> 为必填项</div>
+                        </div>
+
+                        <div class="upload-area" onclick="document.getElementById('cnCodeFile').click();"
+                            style="padding: 20px;">
+                            <div class="upload-icon" style="font-size: 24px;">📥</div>
+                            <p style="margin: 5px 0 0 0; font-size: 14px;">点击上传填好的清单 Excel 或 CSV 文件</p>
+                            <span class="help-text" id="cnCodeFileName">未选择文件</span>
+                            <input type="file" id="cnCodeFile" accept=".xlsx,.xls,.csv">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 联想数据集：在系统加载时会被 JS 动态填入 -->
+                <datalist id="cnCodeList"></datalist>
+
+                <div class="form-group">
+                    <label>2. 您的生产工艺属于以下哪种？</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="processLength" value="short" required>
+                            <div>
+                                <div class="radio-label">短流程（仅机械加工、组装等物理变化）</div>
+                                <div class="radio-desc">外购成型的金属件/铝件进行车铣刨磨钻或拼接组装。</div>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="processLength" value="long">
+                            <div>
+                                <div class="radio-label">长流程（含冶金、铸造、锻造、化工合成等）</div>
+                                <div class="radio-desc">自身包含熔炼、烧结、电解、化学反应等发生化学与相变过程的工艺。</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="supplierQuestion" style="display: none;">
+                    <label>3. 针对贵司生产所需的关键原材料（前体物），是否能够追溯并向供应商获取其“实测实算”的碳排放数据？</label>
+                    <span class="help-text"
+                        style="color: var(--error-color);">【风险提示】若无法追溯供应商实际数据，2027年起将无法通过核查，必须使用较高的欧盟默认值，将增加碳成本。</span>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="traceSupplier" value="yes">
+                            <div>
+                                <div class="radio-label">是，可以推动并追溯供应商要数据</div>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="traceSupplier" value="no">
+                            <div>
+                                <div class="radio-label">否，供应商不配合/不愿意花费精力去追溯</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>4. 本次进行计算的核心驱动力是什么？</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="motivation" value="compliance" required>
+                            <div>
+                                <div class="radio-label">应急应对：较短时间内获得隐含碳排放数据，初步满足下游客户当前的数据要求</div>
+                                <div class="radio-desc">以快速满足当前客户的数据要求为导向，结合行业参考准则进行理论估算，不强制要求全流程实测实算。</div>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="motivation" value="verification">
+                            <div>
+                                <div class="radio-label">长远合规：摸底真实的碳成本，结合工厂与供应商实际数据，为通过2027年核查做准备</div>
+                                <div class="radio-desc">不仅为了填表，更为了优化供应链潜在税务成本，需由技术组介入进行严谨的实测模型构建与证据链收集。</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="button-group" style="justify-content: flex-end;">
+                    <button type="button" class="btn" onclick="nextStep(2)">下一步：生成核算方案</button>
+                </div>
+            </div>
+
+            <!-- Step 2: 结果判定与风险提示 -->
+            <div class="step-container" id="step2">
+                <div id="resultContent">
+                    <!-- 动态注入路径判定结果 -->
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep(1)">返回修改信息</button>
+                    <button type="button" class="btn" onclick="nextStep(3)" id="btnConfirmPath">确认方案，进入系统自动报价</button>
+                </div>
+            </div>
+
+            <!-- Step 3: 系统自动报价 -->
+            <div class="step-container" id="step3">
+                <h3>第二阶段：核算项目规模估算与报价</h3>
+                <p>根据您填报的设施(工厂)数量、受控CN Code种类数以及生产工艺复杂度，系统已为您自动生成本次CBAM隐含碳排放核算服务的预估费用。</p>
+
+                <div class="result-box" style="background:#f0fdf4; border:1px solid #bbf7d0; margin-bottom:20px;">
+                    <div style="font-size: 16px; margin-bottom: 10px; color: #166534;">📉 <strong>项目报价明细</strong></div>
+                    <ul style="line-height: 1.8; font-size: 15px; color: #334155;">
+                        <li>您所选工艺：<span id="quoteProcessType" style="font-weight:bold;">未识别</span></li>
+                        <li>系统判断基准单价：<span id="quoteUnitPrice"
+                                style="font-weight:bold; color:var(--primary-color);">0</span> 元 / (每厂·每产品代码)</li>
+                        <li>填报范围计费量：<span id="quoteCodeCount" style="font-weight:bold;">0</span> 个计量基本单元</li>
+                        <li id="quoteSurchargeRow" style="display:none;">交付物附加费：<span id="quoteSurcharge" style="font-weight:bold; color:var(--secondary-color);">0</span> 元（多选交付物加收）</li>
+                        <hr style="border:0; border-top:1px dashed #cbd5e1; margin: 15px 0;">
+                        <li style="font-size: 18px; color: #0f172a;">本项目预估总金额：<span id="quoteTotalPrice"
+                                style="font-weight:bold; font-size: 26px; color: var(--error-color);">0</span> 元人民币 (含税)
+                        </li>
+                    </ul>
+
+                    <div id="quoteSupplierNote"
+                        style="display: none; margin-top: 15px; padding: 12px; background-color: #fff1f2; border: 1px solid #fda4af; border-left: 4px solid var(--error-color); border-radius: 4px; color: #be123c; font-size: 13.5px; line-height: 1.6;">
+                        <strong>⚠️ 前体材料供应商核算说明：</strong><br>
+                        由于您在上一步勾选了“需要追溯供应商实测数据”，此项预估总金额<strong>仅为贵司自有设施（工厂）的直接排放核算服务费</strong>。<br>
+                        供应商的隐含碳排放核算将在技术团队获取您具体的前体材料采购清单后，根据供应商设施数量及产品类别，<strong>依照同一基准单价另行报价</strong>。<br>
+                        <strong>⚠️
+                            重要提示：</strong>当前报价不包含后续的监测计划编制与第三方核查费用。若需通过2027年CBAM正式核查，贵司及供应商均需建立符合法规的监测计划，此为独立服务项目。</strong>
+                    </div>
+
+                    <p
+                        style="font-size: 12px; color:#64748b; margin-top:15px; background: #fff; padding: 10px; border-radius: 4px;">
+                        * 注：您可以随时关闭此页面请示预算审批。下次点击同一链接即可在当前页面直接恢复所有进度。</p>
+                </div>
+
+                <div class="button-group" style="display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep(2)"
+                        style="flex: 1;">返回上一步</button>
+                    <button type="button" class="btn" onclick="submitQuote('special')"
+                        style="flex: 1; background-color: #f59e0b; color: white;">特殊工艺情况，通知业务顾问联系</button>
+                    <button type="button" class="btn" onclick="submitQuote('confirmed')"
+                        style="flex: 2;">确认报价，保存信息</button>
+                </div>
+            </div>
+
+            <!-- Step 5: 根据路径分流至对应资料提交通道 -->
+            <div class="step-container" id="step5">
+
+                <!-- 方案A：设施直接排放核算+前体材料缺省值 -->
+                <div id="pathA_execution" style="display: none;">
+                    <h3>请下载并填写《CBAM设施能源与过程数据收集表》</h3>
+                    <p>您的核算方案为<strong>【方案A：设施直接排放核算 +
+                            前体材料缺省值</strong>。我们将收集贵司设施的直接排放相关数据（燃料消耗、过程排放、电力消耗等），前体材料（原材料）暂采用欧盟官方缺省值。请下载并填写收集表。</p>
+
+                    <div class="download-card">
+                        <div class="download-info">
+                            <span style="font-size: 24px;">📄</span>
+                            <div>
+                                <strong>钢铁及铝行业数据收集表</strong>
+                                <div style="font-size: 13px; color: #64748b;">(0312钢铁、铝—简版信息收集问答表(瑞欧定制).xlsm)</div>
+                            </div>
+                        </div>
+                        <a href="javascript:alert('业务员：此按钮需外链到你们公司的云盘/文件服务器上的实际文件');" class="download-btn">点击下载</a>
+                    </div>
+
+                    <p class="help-text" style="text-align: right; margin-bottom: 20px;">
+                        *若您的产品非钢铁或铝制品，请联系业务顾问获取对应行业专用表格。</p>
+
+                    <label style="margin-top: 30px;">请上传填写完成的数据收集表：</label>
+                    <div class="upload-area" onclick="document.getElementById('fileA').click();">
+                        <div class="upload-icon">📁</div>
+                        <p>点击此处选择文件，或将表格拖拽至此框内</p>
+                        <span class="help-text" id="fileNameA">未选择文件</span>
+                        <input type="file" id="fileA" accept=".xlsx,.xlsm,.xls">
+                    </div>
+                </div>
+
+                <!-- 方案B：全链路实测核算（含供应商前体材料）-->
+                <div id="pathB_execution" style="display: none;">
+                    <h3>请提交设施工程资料（环评报告/工艺流程图等）</h3>
+                    <p>您的核算方案为<strong>【方案B合规实算】：工厂数据实际计算+供应商实际数据</strong>。技术团队需深入分析贵司设施的生产路线（Production
+                        Route）和系统边界，以进行基于实测的隐含排放核算。</p>
+
+                    <div class="result-box result-path-b" style="margin-bottom: 20px;">
+                        <strong>资料需求清单（请优先提供环评报告）：</strong>
+                        <ul style="margin-top: 8px; margin-bottom: 0; padding-left: 20px; font-size: 14px;">
+                            <li>完整版《环境影响评价报告书/表》（含生产工艺流程图、物料与能源输入输出平衡表）</li>
+                            <li>若无环评，请提供包含以下内容的文件：详细生产工艺步骤、各排放源（Emission Source）与源流（Source Stream）的投入产出清单、能源来源、设施平面布局图。
+                            </li>
+                        </ul>
+                    </div>
+
+                    <label>请打包上传工程与环保相关文件：</label>
+                    <div class="upload-area" onclick="document.getElementById('fileB').click();">
+                        <div class="upload-icon">📄</div>
+                        <p>点击此处选择环评报告等文件，或拖拽至此框内</p>
+                        <span class="help-text" id="fileNameB">未选择文件 (支持 PDF, Word, ZIP压缩包)</span>
+                        <input type="file" id="fileB" accept=".pdf,.doc,.docx,.zip,.rar">
+                    </div>
+
+                    <div class="form-group">
+                        <label>是否有补充说明？（选填）</label>
+                        <textarea rows="3" placeholder="例如说明环评中的产能与实际产能是否一致等..."></textarea>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep(4)">返回上一步</button>
+                    <button type="button" class="btn" onclick="submitForm()">提交流转至技术核算中心</button>
+                </div>
+            </div>
+
+            <!-- 提交成功页面 -->
+            <div class="step-container" id="stepSuccess" style="text-align: center; padding: 40px 0;">
+                <div style="font-size: 64px; color: var(--accent-color); margin-bottom: 20px;">✓</div>
+                <h2 style="color: var(--primary-color);">资料已成功提交</h2>
+                <p style="color: #64748b; margin-bottom: 30px; font-size: 16px;">
+                    我们将立即把您的项目资料推送至技术中心。<br>
+                    技术专员审核资料后，您的业务专属顾问会尽快与您联系后续事宜。
+                </p>
+                <button type="button" class="btn btn-secondary" onclick="location.reload()">返回首页</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 留给管理后台维护其他行业表格的登录入口 -->
+    <a href="javascript:alert('规划中的功能：登入业务/技术管理员后台，在此处可以动态配置规则、分配员工单据、下载客户上传的资料、建立各行业的表单模板库。');" class="admin-link">⚙️
+        内部员工后台入口</a>
+
+    <script src="cn_code_checker.js"></script>
+    <script>
+        // 研发对接必看注释：钉钉/企业微信 Webhook 接入指南！
+        /*
+        ==== 后端研发人员对接说明 ====
+        当客户最后点击“正式提交”时（即触发表单的 submitForm() 函数），可以通过接入第三方API将数据打通：
+
+        示例：钉钉群机器人 Webhook
+        const DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=您的机器人Token";
+
+        // 收集的前端数据结构示例
+        const formData = {
+            company: document.getElementById('companyName').value,
+            // 如果是手动填写的：
+            factories: Array.from(document.querySelectorAll('.factory-box')).map(box => ({
+                name: box.querySelector('.factory-name').value,
+                codes: box.querySelector('.factory-cn-codes').value
+            })),
+            // 其他题目的答案
+            processType: document.querySelector('input[name="processLength"]:checked')?.value,
+            isTrackable: document.querySelector('input[name="traceSupplier"]:checked')?.value || 'N/A',
+            motivation: document.querySelector('input[name="motivation"]:checked')?.value,
+            matchedPath: finalPath // 系统判定的 A或B
+        };
+
+        // 将 formData 打包后，向您的后端服务器发起 POST 请求
+        // 您的后端服务器再去把客户上传的实体文件转存至腾讯云/亚马逊S3，并获取URL
+        // 最后组装出Markdown文本，发送给钉钉：
+        
+        {
+            "msgtype": "markdown",
+            "markdown": {
+                "title": "🚨 新增CBAM业务分配通知",
+                "text": "### 收到新的客户计算服务线索\n" +
+                        "> **企业名称**：杭州某科技公司\n" +
+                        "> **分配路由**：<font color=\"#10b981\">【路径B - 完整实算】</font>\n\n" +
+                        "> **工厂及管辖范围**：共2个厂区\n" +
+                        "> — 铝件分厂 (检测到2个受控代码)\n\n" +
+                        "**操作**：[点击此处前往内部OA下载其工艺及环评物料](http://您的OA网站.com/download?id=xxx)\n"
+            }
+        }
+        */
+
+        let factoryCounter = 1;
+        let activeTab = 'manual';
+
+        // XSS 防护转义函数
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+        }
+
+        // 更新工厂序号
+        function updateFactoryIndexes() {
+            const boxes = document.querySelectorAll('.factory-box');
+            factoryCounter = 0;
+            boxes.forEach(box => {
+                factoryCounter++;
+                const titleStr = box.querySelector('.factory-title');
+                if (titleStr) titleStr.innerText = '工厂/厂区 ' + factoryCounter;
+            });
+        }
+
+        // URL 参数解析逻辑
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlSales = urlParams.get('sales');
+        const urlCompany = urlParams.get('company');
+
+        // ==== 【新增】状态持久化逻辑 - 加载进度 ====
+        function loadProgress() {
+            if (!urlCompany) return;
+            const savedDataStr = localStorage.getItem("cbamProgress_" + urlCompany);
+            if (savedDataStr) {
+                try {
+                    const data = JSON.parse(savedDataStr);
+                    // 恢复工厂数据
+                    if (data.factories && data.factories.length > 0) {
+                        const container = document.getElementById('factoryContainer');
+                        container.innerHTML = ''; // 清空默认
+                        factoryCounter = 0;
+                        data.factories.forEach(f => {
+                            factoryCounter++;
+                            const newBox = document.createElement('div');
+                            newBox.className = 'factory-box';
+                            const deleteBtn = factoryCounter === 1 ? '' : `<button type="button" class="remove-factory" onclick="this.parentElement.remove(); updateFactoryIndexes(); checkAllCNCodes();">✖ 删除工厂</button>`;
+
+                            // 处理旧版保存的逗号分隔字符串，拆分为多个输入框
+                            let codesArray = [""];
+                            if (f.codes) {
+                                const parsed = f.codes.split(/[^\d]+/g).filter(c => c.trim().length > 0);
+                                if (parsed.length > 0) codesArray = parsed;
+                            }
+
+                            let productsHtml = "";
+                            codesArray.forEach((code, idx) => {
+                                const removeBtn = idx === 0 ? '' : `<button type="button" class="btn-remove-product" onclick="this.parentElement.remove(); checkAllCNCodes();">✖ 产品</button>`;
+                                productsHtml += `
+                                    <div class="product-item">
+                                        <input type="text" class="product-cn-code" list="cnCodeList" placeholder="请输入或选择8位CN Code (支持下拉联想)" required value="${escapeHTML(code)}">
+                                        ${removeBtn}
+                                    </div>
+                                `;
+                            });
+
+                            newBox.innerHTML = `
+                                ${deleteBtn}
+                                <span class="factory-title" style="font-weight: bold; color: #475569; margin-bottom: 8px; display:inline-block;">工厂/厂区 ${factoryCounter}</span>
+                                <input type="text" class="factory-name" placeholder="请输入工厂名称（如：喷涂车间/第二分厂）" required style="margin-bottom: 15px;" value="${escapeHTML(f.name)}">
+                                <div class="products-container">
+                                    ${productsHtml}
+                                </div>
+                                <button type="button" class="add-product-btn" onclick="addProduct(this)">+ 新增产品 (CN Code)</button>
+                            `;
+                            container.appendChild(newBox);
+                            newBox.querySelectorAll('.product-cn-code').forEach(input => input.addEventListener('input', checkAllCNCodes));
+                        });
+                        checkAllCNCodes();
+                    }
+
+                    // 恢复单选按钮
+                    if (data.processLength) {
+                        const radio = document.querySelector('input[name="processLength"][value="' + data.processLength + '"]');
+                        if (radio) {
+                            radio.checked = true;
+                            // 触发 change 事件以显示/隐藏供应商模块
+                            const event = new Event('change');
+                            radio.dispatchEvent(event);
+                        }
+                    }
+                    if (data.traceSupplier) {
+                        const radio = document.querySelector('input[name="traceSupplier"][value="' + data.traceSupplier + '"]');
+                        if (radio) radio.checked = true;
+                    }
+                    if (data.motivation) {
+                        const radio = document.querySelector('input[name="motivation"][value="' + data.motivation + '"]');
+                        if (radio) radio.checked = true;
+                    }
+
+                    // 弹出提示框恢复步骤
+                    if (data.currentStep && data.currentStep > 1) {
+                        // 此处如果客户刷新了，我们可以静默或者提示恢复
+                        setTimeout(() => {
+                            // 为了不打断客户的体验，只在确实有后续步骤时静默跳转
+                            if (confirm("检测到贵司上次有未完成的填报进度（停留在第 " + data.currentStep + " 步）。\\n是否立即恢复至该记录？")) {
+                                nextStep(data.currentStep, true);
+                            }
+                        }, 500);
+                    }
+                } catch (e) {
+                    console.log("加载进度失败", e);
+                }
+            }
+        }
+
+        // ==== 【新增】状态持久化逻辑 - 保存进度 ====
+        function saveProgress(currentStep) {
+            if (!urlCompany) return;
+            const factories = [];
+            document.querySelectorAll('.factory-box').forEach(box => {
+                let codesArr = [];
+                box.querySelectorAll('.product-cn-code').forEach(input => {
+                    if (input.value.trim()) codesArr.push(input.value.trim());
+                });
+                factories.push({
+                    name: box.querySelector('.factory-name').value || '',
+                    codes: codesArr.join(',')
+                });
+            });
+            const data = {
+                currentStep: currentStep,
+                factories: factories,
+                processLength: document.querySelector('input[name="processLength"]:checked')?.value || '',
+                traceSupplier: document.querySelector('input[name="traceSupplier"]:checked')?.value || '',
+                motivation: document.querySelector('input[name="motivation"]:checked')?.value || '',
+            };
+            localStorage.setItem("cbamProgress_" + urlCompany, JSON.stringify(data));
+        }
+
+        if (urlSales && urlCompany) {
+            // 带有参数，说明是客户打开的填写页面
+            document.getElementById('sales-portal').style.display = 'none';
+            document.getElementById('customer-portal').style.display = 'block';
+            document.getElementById('companyName').value = decodeURIComponent(urlCompany);
+
+            // 执行历史记录加载
+            loadProgress();
+        } else {
+            // 没有参数，说明是业务员打开的发单页面
+            document.getElementById('sales-portal').style.display = 'block';
+            document.getElementById('customer-portal').style.display = 'none';
+        }
+
+        // 业务员生成专属链接
+        function generateCustomerLink() {
+            const sales = document.getElementById('salesName').value.trim();
+            const company = document.getElementById('salesCompanyName').value.trim();
+            if (!sales || !company) {
+                alert("请完整填写业务员姓名和客户企业名称！");
+                return;
+            }
+
+            // 获取当前不带参数的 url
+            let baseUrl = window.location.origin + window.location.pathname;
+
+            // 如果是在本地电脑双击打开的，给个提示
+            if (window.location.protocol === 'file:') {
+                alert("【提示】您当前是在本地直接双击打开的文件作为测试验证。原生的链接会是一长串本地路径（file:///C:/...）。\n\n为了给您演示最终“客户填表视角”的效果，您可以复制下方生成的完整链接，并将其【粘贴到浏览器的新标签页的地址栏中】然后回车，即可体验完整的双视角切换。\n\n注意：这串本地路径链接在别人手机上是打不开的！正式使用时，请让贵司研发将这个系统文件部署到真实的服务器域名下。");
+            }
+
+            const finalUrl = baseUrl + "?sales=" + encodeURIComponent(sales) + "&company=" + encodeURIComponent(company);
+
+            const shareText = `尊敬的 ${company} 负责人：\n\n为了匹配贵司出口产品合适的CBAM隐含碳排放核算方案，并进行报价，请点击下方专属链接，用1分钟完成线上的信息提交（已为您自动填入企业名称）：\n${finalUrl}\n\n如有任何填报疑问，请随时联系您的专属业务顾问：${sales}`;
+
+            const copyText = document.getElementById("generatedLink");
+            copyText.value = shareText;
+            document.getElementById('generatedLinkArea').style.display = 'block';
+
+            // 自动辅助复制到剪切板
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            try {
+                document.execCommand("copy");
+                alert("✅ 文案及链接已成功复制！请直接在微信中粘贴发送给客户。");
+            } catch (err) {
+                console.log('复制失败');
+            }
+        }
+
+        function switchTab(tabId, element) {
+            activeTab = tabId;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            if (element) {
+                element.classList.add('active');
+            } else {
+                const targetTab = document.querySelector(`.tab[onclick*="${tabId}"]`);
+                if (targetTab) targetTab.classList.add('active');
+            }
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function addFactory() {
+            factoryCounter++;
+            const container = document.getElementById('factoryContainer');
+            const newBox = document.createElement('div');
+            newBox.className = 'factory-box';
+            newBox.innerHTML = `
+                <button type="button" class="remove-factory" onclick="this.parentElement.remove(); updateFactoryIndexes(); checkAllCNCodes();">✖ 删除工厂</button>
+                <span class="factory-title" style="font-weight: bold; color: #475569; margin-bottom: 8px; display:inline-block;">工厂/厂区 ${factoryCounter}</span>
+                <input type="text" class="factory-name" placeholder="请输入工厂名称（如：喷涂车间/第二分厂）" required style="margin-bottom: 15px;">
+                <div class="products-container">
+                    <div class="product-item">
+                        <input type="text" class="product-cn-code" list="cnCodeList" placeholder="请输入或选择8位CN Code (支持下拉联想)" required>
+                    </div>
+                </div>
+                <button type="button" class="add-product-btn" onclick="addProduct(this)">+ 新增产品 (CN Code)</button>
+            `;
+            container.appendChild(newBox);
+
+            updateFactoryIndexes();
+            newBox.querySelectorAll('.product-cn-code').forEach(input => input.addEventListener('input', checkAllCNCodes));
+        }
+
+        // 新增产品填写行
+        function addProduct(btnElement) {
+            const container = btnElement.parentElement.querySelector('.products-container');
+            const newProduct = document.createElement('div');
+            newProduct.className = 'product-item';
+            newProduct.innerHTML = `
+                <input type="text" class="product-cn-code" list="cnCodeList" placeholder="请输入或选择8位CN Code (支持下拉联想)" required>
+                <button type="button" class="btn-remove-product" onclick="this.parentElement.remove(); checkAllCNCodes();">✖ 产品</button>
+            `;
+            container.appendChild(newProduct);
+            newProduct.querySelector('.product-cn-code').addEventListener('input', checkAllCNCodes);
+        }
+
+        // 统一检测所有输入框里的CN Codes
+        function checkAllCNCodes() {
+            const resultDiv = document.getElementById('cnCodeResult');
+            const inputs = document.querySelectorAll('.product-cn-code');
+            let allVal = "";
+            inputs.forEach(t => allVal += t.value + " ");
+
+            const val = allVal.trim();
+            if (!val) {
+                resultDiv.style.display = 'none';
+                return;
+            }
+
+            // 采用最暴力的按“任何非数字”字符进行切割，完美兼容各种全角标点、换行、乱划线、特殊空格的输入
+            const codes = val.split(/[^\d]+/g).filter(c => c.length >= 4);
+
+            if (codes.length === 0) {
+                resultDiv.style.display = 'none';
+                return;
+            }
+
+            let controlledCount = 0;
+            let controlledList = [];
+
+            codes.forEach(code => {
+                if (checkIsControlled(code)) {
+                    // 去重展示
+                    if (!controlledList.includes(code)) {
+                        controlledCount++;
+                        controlledList.push(code);
+                    }
+                }
+            });
+
+            resultDiv.style.display = 'block';
+            if (controlledCount > 0) {
+                resultDiv.style.backgroundColor = '#ecfdf5';
+                resultDiv.style.border = '1px solid #10b981';
+                resultDiv.style.color = '#047857';
+                resultDiv.innerHTML = `<strong>在您输入的所有工厂中，共检测到 ${controlledCount} 个无重复受控代码:</strong> ${controlledList.join(', ')}。<br>已确认属于CBAM管辖范围。`;
+            } else {
+                resultDiv.style.backgroundColor = '#fef2f2';
+                resultDiv.style.border = '1px solid #ef4444';
+                resultDiv.style.color = '#b91c1c';
+                resultDiv.innerHTML = `<strong>未检测到受控代码。</strong><br>请检查输入格式，或前往 <a href="https://www.chemcheck24h.com/" target="_blank" style="color:#b91c1c;text-decoration:underline;">瑞查查</a> 进一步确认。`;
+            }
+        }
+
+        // 初始化加载时填充下拉联想词库 & 生成XLSX模板
+        window.addEventListener('DOMContentLoaded', () => {
+            // 填充CN Code下拉联想词库
+            const datalist = document.getElementById('cnCodeList');
+            if (typeof cbamControlledCodes !== 'undefined') {
+                cbamControlledCodes.forEach(code => {
+                    const option = document.createElement('option');
+                    option.value = code;
+                    datalist.appendChild(option);
+                });
+            }
+
+            // 初始化绑定CN Code输入框事件
+            document.querySelectorAll('.product-cn-code').forEach(el => {
+                el.addEventListener('input', checkAllCNCodes);
+            });
+
+            // 动态生成XLSX模板下载（美观的Excel格式）
+            const downloadBtn = document.getElementById('downloadTemplateBtn');
+            if (downloadBtn) {
+                downloadBtn.removeAttribute('href');
+                downloadBtn.style.cursor = 'pointer';
+                downloadBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    generateXlsxTemplate();
+                });
+            }
+        });
+
+        // 监听文件上传改变名称展示
+        document.getElementById('cnCodeFile').addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                document.getElementById('cnCodeFileName').textContent = '已选择: ' + e.target.files[0].name;
+                document.getElementById('cnCodeFileName').style.color = 'var(--secondary-color)';
+                document.getElementById('cnCodeFileName').style.fontWeight = 'bold';
+            }
+        });
+
+        // 监听工艺类型的变化以决定是否展示供应商追溯题
+        document.querySelectorAll('input[name="processLength"]').forEach((elem) => {
+            elem.addEventListener("change", function (event) {
+                var item = event.target.value;
+                if (item === "short") {
+                    document.getElementById("supplierQuestion").style.display = "block";
+                } else {
+                    document.getElementById("supplierQuestion").style.display = "none";
+                    // 长流程强制需要去追溯或者说本厂就非常复杂，直接纳入路径B逻辑。
+                }
+            });
+        });
+
+        // 注意：contractFile 元素已移除，此处不再绑定事件监听器
+
+        // 监听文件上传改变名称展示
+        document.getElementById('fileA').addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                document.getElementById('fileNameA').textContent = '已选择: ' + e.target.files[0].name;
+                document.getElementById('fileNameA').style.color = 'var(--secondary-color)';
+                document.getElementById('fileNameA').style.fontWeight = 'bold';
+            }
+        });
+
+        document.getElementById('fileB').addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                document.getElementById('fileNameB').textContent = '已选择: ' + e.target.files[0].name;
+                document.getElementById('fileNameB').style.color = 'var(--secondary-color)';
+                document.getElementById('fileNameB').style.fontWeight = 'bold';
+            }
+        });
+
+        // 存储判定的路径结果
+        let finalPath = "";
+
+        // ===== 交付物选择相关函数 =====
+        // 更新交付物checkbox的父label样式
+        function updateDeliverableUI(checkbox) {
+            const label = checkbox.closest('.deliverable-item');
+            if (checkbox.checked) {
+                label.classList.add('checked');
+            } else {
+                label.classList.remove('checked');
+            }
+        }
+
+        // 计算交付物附加费（超过1项，每多1项加1000元）
+        function updateDeliverableSurcharge(path) {
+            const checkboxes = document.querySelectorAll('input[name="deliverable' + path + '"]:checked');
+            const count = checkboxes.length;
+            const surcharge = count > 1 ? (count - 1) * 1000 : 0;
+            const surchargeEl = document.getElementById('surcharge' + path);
+            if (surchargeEl) {
+                if (surcharge > 0) {
+                    surchargeEl.style.display = 'block';
+                    surchargeEl.textContent = '已选择 ' + count + ' 项交付物，附加费：+¥' + surcharge.toLocaleString();
+                } else {
+                    surchargeEl.style.display = 'none';
+                }
+            }
+        }
+
+        // 获取当前交付物附加费金额（供Step3报价使用）
+        function getDeliverableSurcharge() {
+            const pathName = finalPath === 'A' ? 'deliverableA' : 'deliverableB';
+            const checkboxes = document.querySelectorAll('input[name="' + pathName + '"]:checked');
+            const count = checkboxes.length;
+            return count > 1 ? (count - 1) * 1000 : 0;
+        }
+
+        // 切换"其他"交付物的上传区域显示
+        function toggleOtherUpload(checkbox, uploadId) {
+            const uploadArea = document.getElementById(uploadId);
+            if (uploadArea) {
+                uploadArea.style.display = checkbox.checked ? 'block' : 'none';
+            }
+        }
+
+        // ===== XLSX模板生成函数 =====
+        function generateXlsxTemplate() {
+            // 表头数据
+            const headers = ['序号', '工厂/厂区名称（必填）', '8位CN Code（必填）', '产品中文名称（选填）', '备注（选填）'];
+            // 示例数据
+            const examples = [
+                [1, '总厂', '72071100', '方坯', ''],
+                [2, '总厂', '72142000', '螺纹钢', '主力出口产品'],
+                [3, '第二分厂', '76042910', '铝型材', ''],
+                [4, '第三分厂（铸造车间）', '72071100', '方坯', '同一CN Code在不同工厂'],
+                [5, '', '', '', '（继续按格式添加）']
+            ];
+            // 填写说明行
+            const noteRow = ['填写说明：每行填写【一个工厂 + 一个产品CN Code】的组合。同一工厂有多个产品请分多行填写（工厂名保持一致即可）。'];
+
+            // 构建工作表数据
+            const wsData = [noteRow, headers, ...examples];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // 设置列宽
+            ws['!cols'] = [
+                { wch: 6 },   // 序号
+                { wch: 28 },  // 工厂名称
+                { wch: 22 },  // CN Code
+                { wch: 22 },  // 产品名称
+                { wch: 28 }   // 备注
+            ];
+
+            // 合并第一行（说明行）
+            ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+
+            // 创建工作簿并导出
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'CBAM产品清单模板');
+            XLSX.writeFile(wb, 'CBAM产品清单批量导入模板.xlsx');
+        }
+
+        function nextStep(step, isRecovering = false) {
+            // Validate step 1
+            if (step === 2) {
+                if (!isRecovering) {
+                    if (!document.getElementById('companyName').value) {
+                        alert('请输入企业名称！');
+                        return;
+                    }
+
+                    if (activeTab === 'manual') {
+                        const factoryNodes = document.querySelectorAll('.product-cn-code');
+                        if (factoryNodes.length === 0) {
+                            alert('请至少添加一个工厂和一个产品！');
+                            return;
+                        }
+                        const firstCode = factoryNodes[0].value;
+                        if (!firstCode) {
+                            alert('当前工厂未填写产品 CN Code，请补充！');
+                            return;
+                        }
+                    } else {
+                        if (document.getElementById('cnCodeFile').files.length === 0) {
+                            alert('请先上传包含工厂与海关编码清单的Excel文件！');
+                            return;
+                        }
+                    }
+
+                    const processElem = document.querySelector('input[name="processLength"]:checked');
+                    const motivElem = document.querySelector('input[name="motivation"]:checked');
+
+                    if (!processElem) {
+                        alert('请选择生产工艺类型！');
+                        return;
+                    }
+
+                    if (processElem.value === 'short' && !document.querySelector('input[name="traceSupplier"]:checked')) {
+                        alert('对于短流程工艺，请勾选是否能追溯供应商数据！');
+                        return;
+                    }
+
+                    if (!motivElem) {
+                        alert('请选择核心驱动力！');
+                        return;
+                    }
+                }
+
+                // 核心判定逻辑 (Core Decision Logic based on SOP) - Should always run so resultContent doesn't end up empty!
+                const processElem = document.querySelector('input[name="processLength"]:checked');
+                const motivElem = document.querySelector('input[name="motivation"]:checked');
+
+                const isShort = processElem ? processElem.value === 'short' : false;
+                const traceObj = document.querySelector('input[name="traceSupplier"]:checked');
+                const canTrace = traceObj ? traceObj.value === 'yes' : false;
+                const motivation = motivElem ? motivElem.value : 'compliance';
+
+                let resultHtml = "";
+
+                const company = document.getElementById('companyName').value || "客户";
+                const safeCompany = escapeHTML(company);
+
+                // 方案A的条件：常规履约、或者短流程且无法追溯供应商
+                if (motivation === 'compliance' || (isShort && !canTrace)) {
+                    finalPath = "A";
+                    resultHtml = `
+                        <div class="result-box result-path-a">
+                            <div class="result-title">🎯 匹配方案：【方案A精简估算】工厂内部排放核算 + 前体材料缺省值/行业经验值</div>
+                            <p><strong>尊敬的 ${safeCompany}负责人：</strong></p>
+                            <p><strong>为何分配此路径：</strong>根据您的评估选项，当前现阶段最适合您企业的方案为“精简估算”。由于客观供应链溯源受限或当前仅需覆盖基础申报参数，我们建议采用此方案以最优化您的整体合规成本，和快速响应下游欧盟进口商的需求。</p>
+                            <p><strong>核算内容：</strong>技术团队将为贵司设施划定系统边界（System Boundary），识别所有排放源和源流，收集活动数据（Activity Data）并匹配排放因子（Emission Factor），最终计算出每种产品的<strong>特定隐含排放量（Specific Embedded Emissions）</strong>。</p>
+                            
+                            <div class="deliverable-group">
+                                <div class="deliverable-group-title">📦 请选择交付物（可多选）</div>
+                                <label class="deliverable-item checked">
+                                    <input type="checkbox" name="deliverableA" value="cbam_table" checked onchange="updateDeliverableUI(this); updateDeliverableSurcharge('A');">
+                                    <div>
+                                        <div class="deliverable-label">CBAM表格</div>
+                                        <div class="deliverable-desc">下游客户特定要求的CBAM数据表格</div>
+                                    </div>
+                                </label>
+                                <label class="deliverable-item">
+                                    <input type="checkbox" name="deliverableA" value="cbam_report" onchange="updateDeliverableUI(this); updateDeliverableSurcharge('A');">
+                                    <div>
+                                        <div class="deliverable-label">CBAM报告</div>
+                                        <div class="deliverable-desc">征收期常规交付报告</div>
+                                    </div>
+                                </label>
+                                <label class="deliverable-item">
+                                    <input type="checkbox" name="deliverableA" value="other" onchange="updateDeliverableUI(this); updateDeliverableSurcharge('A'); toggleOtherUpload(this, 'deliverableUploadA');">
+                                    <div>
+                                        <div class="deliverable-label">其他</div>
+                                        <div class="deliverable-desc">请上传下游客户要求的模板</div>
+                                    </div>
+                                </label>
+                                <div class="deliverable-upload-area" id="deliverableUploadA" onclick="event.stopPropagation(); document.getElementById('deliverableFileA').click();">
+                                    📎 点击上传下游客户要求的模板文件
+                                    <div id="deliverableFileNameA" style="margin-top:4px; font-size:12px; color: var(--secondary-color);"></div>
+                                    <input type="file" id="deliverableFileA" style="display:none;" accept=".xlsx,.xls,.pdf,.doc,.docx" onchange="document.getElementById('deliverableFileNameA').textContent='已选择: '+this.files[0].name;">
+                                </div>
+                                <div class="deliverable-surcharge" id="surchargeA"></div>
+                                <div class="deliverable-note">💡 常规交付包含 1 项，每增加 1 项交付物需加收 ¥1,000</div>
+                            </div>
+
+                            <div class="warning-text">
+                                ⚠️ 重要合规风险提示：<br>
+                                <strong>关于缺省值：</strong>前体材料采用欧盟缺省值或行业经验值在当前阶段可快速完成核算。但需注意：<br>
+                                · 缺省值通常<strong>显著高于实际排放值</strong>，会导致最终计算出的产品隐含排放偏高，增加实际碳税成本。<br>
+                                · 自2027年CBAM正式征收期起，欧盟法规要求若要采用前体材料的实际隐含排放数据，必须<strong>经认可核查机构核查</strong>，否则将被强制适用惩罚性默认值。<br>
+                                · 如后续希望降低碳税成本或应对正式核查，建议尽早推动供应商建立监测计划以及开展实际计算，为27年获取经核查的实际排放数据做准备。
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('btnConfirmPath').innerText = "我已知悉以上风险，进入系统自动报价";
+                }
+                // 方案B的条件：长流程、或为了应对核查、或者愿意推动供应商实测
+                else {
+                    finalPath = "B";
+                    resultHtml = `
+                        <div class="result-box result-path-b">
+                            <div class="result-title">🌟 匹配方案：【方案B合规实算】工厂数据实际计算+供应商实际数据</div>
+                            <p><strong>尊敬的 ${safeCompany}负责人：</strong></p>
+                            <p><strong>方案说明：</strong>根据您的填报信息，系统为您匹配的核算方案为——对贵司<strong>自有设施（工厂）</strong>的直接排放与间接排放进行实测核算的同时，需推动上游<strong>前体材料（原材料）供应商</strong>提供其设施的实际排放数据（或由我司协助供应商进行核算），两部分数据汇总后，为贵司产品计算完整的特定隐含排放量。</p>
+                            <p><strong>核算内容：</strong>技术团队将基于贵司《环评报告》等工程资料，分析每条生产路线（Production Route），划定系统边界，建立完整的排放监测方法学，核算贵司设施的碳排放数据。同时，贵司需推动前体材料供应商提供实测数据或委托我司对供应商进行独立核算。</p>
+                            
+                            <div class="deliverable-group">
+                                <div class="deliverable-group-title">📦 请选择交付物（可多选）</div>
+                                <label class="deliverable-item checked">
+                                    <input type="checkbox" name="deliverableB" value="cbam_report" checked onchange="updateDeliverableUI(this); updateDeliverableSurcharge('B');">
+                                    <div>
+                                        <div class="deliverable-label">CBAM报告</div>
+                                        <div class="deliverable-desc">征收期常规交付报告</div>
+                                    </div>
+                                </label>
+                                <label class="deliverable-item">
+                                    <input type="checkbox" name="deliverableB" value="carbon_cost_report" onchange="updateDeliverableUI(this); updateDeliverableSurcharge('B');">
+                                    <div>
+                                        <div class="deliverable-label">CBAM碳成本对比报告</div>
+                                        <div class="deliverable-desc">用于重点供应商识别，预估27年碳成本，为产品价格战略做参考</div>
+                                    </div>
+                                </label>
+                                <label class="deliverable-item">
+                                    <input type="checkbox" name="deliverableB" value="other" onchange="updateDeliverableUI(this); updateDeliverableSurcharge('B'); toggleOtherUpload(this, 'deliverableUploadB');">
+                                    <div>
+                                        <div class="deliverable-label">其他</div>
+                                        <div class="deliverable-desc">请上传下游客户要求的模板</div>
+                                    </div>
+                                </label>
+                                <div class="deliverable-upload-area" id="deliverableUploadB" onclick="event.stopPropagation(); document.getElementById('deliverableFileB').click();">
+                                    📎 点击上传下游客户要求的模板文件
+                                    <div id="deliverableFileNameB" style="margin-top:4px; font-size:12px; color: var(--secondary-color);"></div>
+                                    <input type="file" id="deliverableFileB" style="display:none;" accept=".xlsx,.xls,.pdf,.doc,.docx" onchange="document.getElementById('deliverableFileNameB').textContent='已选择: '+this.files[0].name;">
+                                </div>
+                                <div class="deliverable-surcharge" id="surchargeB"></div>
+                                <div class="deliverable-note">💡 常规交付包含 1 项，每增加 1 项交付物需加收 ¥1,000</div>
+                            </div>
+
+                            <div style="margin-top:12px; padding: 10px; background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; font-size: 13px; color: #92400e; line-height: 1.6;">
+                                <strong>📌 本次报价范围说明：</strong><br>
+                                · 当前报价<strong>仅包含贵司自有设施（工厂）</strong>的隐含排放核算服务费。<br>
+                                · <strong>不包含：</strong>上游前体材料供应商的核算费用（根据供应商数量和产品类别另行报价）、后续监测计划编制费用、以及第三方核查费用。<br>
+                                · <strong>2027年核查要求：</strong>若要通过欧盟CBAM正式核查，贵司和前体材料供应商均须建立符合法规附件II要求的<strong>监测计划（Monitoring Plan）</strong>，并获得经认可核查机构（Accredited Verifier）的核查报告。监测计划和核查为独立服务项目。
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('btnConfirmPath').innerText = "确认方案，进入系统自动报价";
+                }
+
+                document.getElementById('resultContent').innerHTML = resultHtml;
+            }
+
+            // Step 3: Quote Generation Logic
+            if (step === 3) {
+                const processElem = document.querySelector('input[name="processLength"]:checked');
+                const isShort = processElem.value === 'short';
+
+                let totalCodes = 0;
+                let uniqueCodesList = []; // 修复Bug：多个工厂重复代码应当如何收费？暂按总输入去重计算
+
+                if (activeTab === 'manual') {
+                    // 循环收集所有的CN Code
+                    let combinedVal = "";
+                    document.querySelectorAll('.product-cn-code').forEach(input => {
+                        combinedVal += input.value + " ";
+                    });
+
+                    const codesArr = combinedVal.split(/[^\d]+/g).filter(c => c.trim().length >= 4);
+                    // 过滤出真正受控的代码
+                    codesArr.forEach(c => {
+                        if (checkIsControlled(c) && !uniqueCodesList.includes(c)) {
+                            uniqueCodesList.push(c);
+                        }
+                    });
+                    totalCodes = uniqueCodesList.length;
+
+                } else {
+                    // 如果是上传文件，由于无法纯前端解析Excel，这里做个兜底默认1
+                    totalCodes = 1;
+                }
+
+                // 如果为空，至少算1个起步报价
+                if (totalCodes === 0) totalCodes = 1;
+
+                // 单价根据 SOP: 短流程 6360， 长流程 10600
+                const unitPrice = isShort ? 6360 : 10600;
+                const deliverableSurcharge = getDeliverableSurcharge();
+                const totalPrice = unitPrice * totalCodes + deliverableSurcharge;
+
+                document.getElementById('quoteProcessType').innerText = isShort ? '短流程 (纯机械/组装)' : '长流程 (熔炼/化工/复杂相变)';
+                document.getElementById('quoteUnitPrice').innerText = unitPrice;
+                document.getElementById('quoteCodeCount').innerText = activeTab === 'manual' ? totalCodes : "1 (检测到您上传了清单附件，已触发系统预定金模式，最终总数以法务审核附件得出为准)";
+
+                // 显示交付物附加费
+                if (deliverableSurcharge > 0) {
+                    document.getElementById('quoteSurchargeRow').style.display = 'list-item';
+                    document.getElementById('quoteSurcharge').innerText = deliverableSurcharge.toLocaleString();
+                } else {
+                    document.getElementById('quoteSurchargeRow').style.display = 'none';
+                }
+
+                // 格式化价格，加千分位
+                document.getElementById('quoteTotalPrice').innerText = totalPrice.toLocaleString();
+
+                // 判断是否需要追加供应商追溯的预警说明
+                const traceObj = document.querySelector('input[name="traceSupplier"]:checked');
+                const canTrace = traceObj ? traceObj.value === 'yes' : false;
+
+                if (canTrace) {
+                    document.getElementById('quoteSupplierNote').style.display = 'block';
+                } else {
+                    document.getElementById('quoteSupplierNote').style.display = 'none';
+                }
+            }
+
+            // Update UI
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+            // 如果尝试恢复到某一步的时候，确保之前经过的所有步骤相关的 DOM 被赋予正确的状态
+            const targetStepEl = document.getElementById('step' + step);
+            if (targetStepEl) {
+                targetStepEl.classList.add('active');
+            }
+
+            // Save state (如果是恢复过程则不重复覆写)
+            if (!isRecovering) {
+                saveProgress(step);
+            }
+
+            // Update progress indicators
+            document.querySelectorAll('.progress-step').forEach((el, index) => {
+                if (index < step - 1) {
+                    el.classList.add('completed');
+                    el.classList.remove('active');
+                } else if (index === step - 1) {
+                    el.classList.add('active');
+                    el.classList.remove('completed');
+                } else {
+                    el.classList.remove('active');
+                    el.classList.remove('completed');
+                }
+            });
+        }
+
+        function prevStep(step) {
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+            document.getElementById('step' + step).classList.add('active');
+
+            // Back 也可以保存进度
+            saveProgress(step);
+
+            // Update progress indicators
+            document.querySelectorAll('.progress-step').forEach((el, index) => {
+                if (index < step - 1) {
+                    el.classList.add('completed');
+                    el.classList.remove('active');
+                } else if (index === step - 1) {
+                    el.classList.add('active');
+                    el.classList.remove('completed');
+                } else {
+                    el.classList.remove('active');
+                    el.classList.remove('completed');
+                }
+            });
+        }
+
+        // ============ Supabase 初始化（anon key 安全使用，配合RLS策略） ============
+        const SUPABASE_URL = 'https://psujmrphmgixrtczaisf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdWptcnBobWdpeHJ0Y3phaXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MTE4ODMsImV4cCI6MjA4OTI4Nzg4M30.W6TIttAzEGwyIQukZIxikckCVTZOup0QYRMSEBD4CeE';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function submitQuote(type) {
+            // 保存当前进度
+            saveProgress(3);
+
+            const company = document.getElementById('companyName').value;
+            const sales = urlSales || "未指定业务员";
+            const quoteTotal = document.getElementById('quoteTotalPrice').innerText;
+            const refNumber = "CBAM-" + new Date().getFullYear() + "-" + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+
+            const currentPathName = finalPath === "A" ? "方案A-精简估算" : "方案B-合规实算";
+            const submitStatus = type === 'special' ? "工艺存在特殊情况，请求业务员复核沟通" : "客户已自主确认报价单";
+
+            // 收集工厂和产品数据
+            const factoriesData = [];
+            document.querySelectorAll('.factory-block').forEach((block, idx) => {
+                const products = [];
+                block.querySelectorAll('.product-cn-code').forEach(input => {
+                    if (input.value.trim()) products.push(input.value.trim());
+                });
+                factoriesData.push({ factory_index: idx + 1, cn_codes: products });
+            });
+
+            // 收集交付物选择
+            const deliverables = [];
+            const deliverableName = finalPath === 'A' ? 'deliverableA' : 'deliverableB';
+            document.querySelectorAll(`input[name="${deliverableName}"]:checked`).forEach(cb => {
+                deliverables.push(cb.value);
+            });
+
+            // 收集工艺和供应商追溯信息
+            const processElem = document.querySelector('input[name="processLength"]:checked');
+            const traceElem = document.querySelector('input[name="traceSupplier"]:checked');
+            const motivElem = document.querySelector('input[name="motivation"]:checked');
+
+            // 组装提交数据
+            const formData = {
+                sales_name: sales,
+                company_name: company,
+                factories: factoriesData,
+                process_type: processElem ? processElem.value : null,
+                trace_supplier: traceElem ? traceElem.value : null,
+                motivation: motivElem ? motivElem.value : null,
+                matched_path: currentPathName,
+                quote_total: quoteTotal + "元",
+                submit_type: submitStatus,
+                ref_number: refNumber,
+                deliverables: deliverables.join(', '),
+                submission_data: {
+                    "业务员": sales,
+                    "客户企业名称": company,
+                    "建议匹配路径": currentPathName,
+                    "生成的预估总价": quoteTotal + "元",
+                    "签约状态": submitStatus,
+                    "项目编号": refNumber,
+                    "工厂信息": factoriesData,
+                    "交付物": deliverables,
+                    "提交时间": new Date().toISOString()
+                }
+            };
+
+            console.log("正在提交数据到 Supabase 云端数据库...", formData);
+
+            // ===== 写入 Supabase 数据库 =====
+            try {
+                const { data, error } = await supabaseClient
+                    .from('cbam_submissions')
+                    .insert([formData]);
+
+                if (error) {
+                    console.error('Supabase 写入失败:', error);
+                    alert('数据保存出现问题，但您的报价已记录在本地。请联系业务员确认。\n错误信息: ' + error.message);
+                } else {
+                    console.log('✅ 数据已成功保存到 Supabase 云端数据库！', data);
+                }
+            } catch (e) {
+                console.error('网络异常，无法连接到云端数据库:', e);
+                // 即使网络异常也不阻塞用户流程，数据在localStorage中已有备份
+            }
+
+            // 切换到成功界面
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+
+            let successTitle = type === 'special' ? "通知已下发" : "报价已确认";
+            let successMessage = type === 'special'
+                ? "业务员 <strong>" + sales + "</strong> 已收到您的提示，将尽快与您联系了解特殊工艺细节。"
+                : "您的预估报价确认单已成功建档保存。业务专属顾问 <strong>" + sales + "</strong> 会通过企业微信向您发送正式的合同模板，请您耐心等待。";
+
+            let successHtml = `
+                <div style="font-size: 64px; color: var(--accent-color); margin-bottom: 20px;">✓</div>
+                <h2 style="color: var(--primary-color);">${successTitle}</h2>
+                <p style="color: #64748b; margin-bottom: 30px; font-size: 16px;">
+                    尊敬的 <strong>${escapeHTML(company)}</strong>负责人，您的项目档案初步流转已保存。项目编号为：<strong>${refNumber}</strong><br><br>
+                    ${successMessage}<br><br>
+                    <span style="font-size: 13px; color: #94a3b8;">📡 数据已同步至云端数据库</span>
+                </p>
+                <button type="button" class="btn btn-secondary" onclick="location.reload()">重新回到首页填报</button>
+            `;
+            document.getElementById('stepSuccess').innerHTML = successHtml;
+            document.getElementById('stepSuccess').classList.add('active');
+
+            // 标记所有步骤完成
+            document.querySelectorAll('.progress-step').forEach(el => {
+                el.classList.add('completed');
+                el.classList.remove('active');
+            });
+        }
+    </script>
+</body>
+
+</html>
