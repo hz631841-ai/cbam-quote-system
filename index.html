@@ -2095,6 +2095,13 @@
                 behavior: 'smooth'
             });
 
+            // Update UI
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+            const targetStepEl = document.getElementById('step' + step);
+            if (targetStepEl) {
+                targetStepEl.classList.add('active');
+            }
+
             // Back 也可以保存进度
             saveProgress(step);
 
