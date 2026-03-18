@@ -1335,34 +1335,30 @@
                         checkAllCNCodes();
                     }
 
-                    // 恢复单选按钮
-                    if (data.processLength) {
-                        const radio = document.querySelector('input[name="processLength"][value="' + data.processLength + '"]');
-                        if (radio) {
-                            radio.checked = true;
-                            // 触发 change 事件以显示/隐藏供应商模块
-                            const event = new Event('change');
-                            radio.dispatchEvent(event);
-                        }
-                    }
-                    if (data.traceSupplier) {
-                        const radio = document.querySelector('input[name="traceSupplier"][value="' + data.traceSupplier + '"]');
-                        if (radio) radio.checked = true;
-                    }
-                    if (data.motivation) {
-                        const radio = document.querySelector('input[name="motivation"][value="' + data.motivation + '"]');
-                        if (radio) radio.checked = true;
-                    }
-
-                    // 弹出提示框恢复步骤
+                    // 弹出提示框，用户确认后才恢复单选按钮和步骤
                     if (data.currentStep && data.currentStep > 1) {
                         setTimeout(() => {
                             if (confirm("检测到贵司上次有未完成的填报进度（停留在第 " + data.currentStep + " 步）。\\n是否立即恢复至该记录？")) {
-                                // 确保所有radio选择已在DOM中生效
-                                // 先逐步恢复到每一个中间步骤，让每步的动态内容都被正确生成
+                                // 用户确认恢复，先恢复单选按钮状态
+                                if (data.processLength) {
+                                    const r1 = document.querySelector('input[name="processLength"][value="' + data.processLength + '"]');
+                                    if (r1) { r1.checked = true; r1.dispatchEvent(new Event('change')); }
+                                }
+                                if (data.traceSupplier) {
+                                    const r2 = document.querySelector('input[name="traceSupplier"][value="' + data.traceSupplier + '"]');
+                                    if (r2) r2.checked = true;
+                                }
+                                if (data.motivation) {
+                                    const r3 = document.querySelector('input[name="motivation"][value="' + data.motivation + '"]');
+                                    if (r3) r3.checked = true;
+                                }
+                                // 逐步恢复到保存的步骤
                                 for (let s = 2; s <= data.currentStep; s++) {
                                     nextStep(s, true);
                                 }
+                            } else {
+                                // 用户选择不恢复，清除保存的进度数据
+                                localStorage.removeItem("cbamProgress_" + urlCompany);
                             }
                         }, 600);
                     }
@@ -2227,9 +2223,7 @@
                     "工厂信息": factoriesData,
                     "交付物": deliverables,
                     "提交时间": new Date().toISOString()
-                },
-                uploaded_file_url: '无附件',
-                salesPhone: urlPhone || ''
+                }
             };
 
             console.log("正在提交数据到 Supabase 云端数据库...", formData);
