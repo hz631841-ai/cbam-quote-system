@@ -1,0 +1,19 @@
+# CBAM报价系统 - 禁止所有爬虫抓取
+User-agent: *
+Disallow: /
+
+# 禁止所有搜索引擎索引
+User-agent: Googlebot
+Disallow: /
+
+User-agent: Baiduspider
+Disallow: /
+
+User-agent: bingbot
+Disallow: /
+
+User-agent: Sogou
+Disallow: /
+
+User-agent: 360Spider
+Disallow: /
