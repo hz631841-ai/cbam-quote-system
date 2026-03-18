@@ -831,7 +831,7 @@
         </div>
 
         <div class="form-group" style="text-align: left;">
-            <label>您的手机号 (用于客户提交后钉钉@提醒您)</label>
+            <label>您的手机号 (用于客户提交后钉钉提醒您)</label>
             <input type="tel" id="salesPhone" placeholder="请输入您的手机号" required style="box-shadow: none;" maxlength="11"
                 pattern="[0-9]{11}">
             <div style="font-size:12px; color:#94a3b8; margin-top:4px;">💡 系统会自动记住您的手机号，下次无需重复输入</div>
@@ -2087,47 +2087,12 @@
                 }
 
                 // 格式化价格，加千分位
-                document.getElementById('quoteTotalPrice').innerText = totalPrice.toLocaleString();
-
-                // 红色提醒始终显示（所有路径统一展示价格说明）
-                document.getElementById('quoteSupplierNote').style.display = 'block';
-            }
-
-            // Update UI
-            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
-            // 如果尝试恢复到某一步的时候，确保之前经过的所有步骤相关的 DOM 被赋予正确的状态
-            const targetStepEl = document.getElementById('step' + step);
-            if (targetStepEl) {
-                targetStepEl.classList.add('active');
-            }
-            // 切换步骤后自动滚动到页面顶部
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            // Save state (如果是恢复过程则不重复覆写)
-            if (!isRecovering) {
-                saveProgress(step);
-            }
-
-            // Update progress indicators
-            document.querySelectorAll('.progress-step').forEach((el, index) => {
-                if (index < step - 1) {
-                    el.classList.add('completed');
-                    el.classList.remove('active');
-                } else if (index === step - 1) {
-                    el.classList.add('active');
-                    el.classList.remove('completed');
-                } else {
-                    el.classList.remove('active');
-                    el.classList.remove('completed');
-                }
+                document.getElementById('quoteTotalPrice').innerTe            // === 1. 发送数据给钉钉原生AI多维表格 ===
+                if (TABLE_WEBHOOK) {
+                    // 原有的前端发请求逻辑已完全交由 Supabase 数据库端触发器处理。
+                    // 这样能100%避免浏览器的拦截问题，同时也避免前端被修好时造成数据重复（提交两次）。
+                } p: 0, behavior: 'smooth'
             });
-        }
-
-        function prevStep(step) {
-            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
-            document.getElementById('step' + step).classList.add('active');
-            // 返回上一步也滚动到顶部
-            window.scrollTo({ top: 0, behavior: 'smooth' });
 
             // Back 也可以保存进度
             saveProgress(step);
@@ -2200,6 +2165,14 @@
             const traceElem = document.querySelector('input[name="traceSupplier"]:checked');
             const motivElem = document.querySelector('input[name="motivation"]:checked');
 
+            // 获取前体材料计算方式
+            let materialMethodText = '供应商实际计算';
+            if (motivElem && motivElem.value === 'compliance' && typeof selectedMaterialSource !== 'undefined') {
+                if (selectedMaterialSource === 'eu_default') materialMethodText = '欧盟征收期默认值';
+                else if (selectedMaterialSource === 'industry_exp') materialMethodText = '行业经验值';
+                else if (selectedMaterialSource === 'supplier_data') materialMethodText = '供应商提供的产品碳足迹信息';
+            }
+
             // 组装提交数据
             const formData = {
                 sales_name: sales,
@@ -2222,6 +2195,7 @@
                     "项目编号": refNumber,
                     "工厂信息": factoriesData,
                     "交付物": deliverables,
+                    "前体材料计算方式": materialMethodText,
                     "提交时间": new Date().toISOString()
                 }
             };
@@ -2244,8 +2218,7 @@
                 console.error('网络异常，无法连接到云端数据库:', e);
             }
 
-            // 不管Supabase是否成功，始终推送钉钉通知
-            syncToDingTalk(formData);
+            // 已废弃：不在前端发送钉钉通知，统一由 Supabase 后端触发，避免重复。
 
             // 切换到成功界面
             document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
@@ -2285,73 +2258,8 @@
 
         // ============ 钉钉数据同步（通过Webhook推送通知） ============
         async function syncToDingTalk(formData) {
-            // 钉钉 Webhook（已混淆存储，防止爬虫抓取）
-            const DINGTALK_WEBHOOK = _d(_c.c);
-            const TABLE_WEBHOOK = _d(_c.d);
-
-            const salesPhone = formData.salesPhone || urlPhone || '';
-
-            // === 1. 推送结构化 JSON 到钉钉多维表 ===
-            if (TABLE_WEBHOOK) {
-                try {
-                    // 获取前体材料计算方式
-                    var materialMethodText = '供应商实际计算';
-                    var complianceRadio = document.querySelector('input[name="motivation"][value="compliance"]');
-                    if (complianceRadio && complianceRadio.checked && typeof selectedMaterialSource !== 'undefined') {
-                        if (selectedMaterialSource === 'eu_default') materialMethodText = '欧盟征收期默认值';
-                        else if (selectedMaterialSource === 'industry_exp') materialMethodText = '行业经验值';
-                        else if (selectedMaterialSource === 'supplier_data') materialMethodText = '供应商提供的产品碳足迹信息';
-                    }
-
-                    const tableData = {
-                        客户公司: formData.company_name || '未填写',
-                        业务员: formData.sales_name || '未指定',
-                        推荐方案: formData.matched_path || '未知',
-                        前体材料计算方式: materialMethodText,
-                        报价金额: formData.quote_total || '待定',
-                        项目编号: formData.ref_number || '',
-                        附件下载链接: formData.uploaded_file_url || '无附件',
-                        提交时间: new Date().toLocaleString('zh-CN'),
-                        报价状态: formData.submit_type || '未知'
-                    };
-                    fetch(TABLE_WEBHOOK, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(tableData)
-                    }).then(res => console.log('多维表推送成功:', res.status))
-                        .catch(err => console.error('多维表推送失败:', err));
-                } catch (e) { console.error('多维表推送异常:', e); }
-            }
-
-            // === 2. 发送 Markdown 通知给群机器人 ===
-            if (DINGTALK_WEBHOOK) {
-                const msgContent = `### 📋 CBAM报价系统 - 新客户提交\n` +
-                    `> **客户公司**: ${formData.company_name || '未填写'}\n\n` +
-                    `> **业务员**: ${formData.sales_name || '未知'}\n\n` +
-                    `> **推荐方案**: ${formData.matched_path || '未知'}\n\n` +
-                    `> **报价金额**: <font color=#ff0000 size=4>${formData.quote_total || '待定'}</font>\n\n` +
-                    `> **项目编号**: ${formData.ref_number || ''}\n\n` +
-                    `> **报价状态**: ${formData.submit_type || '未知'}\n\n` +
-                    `> **附件**: ${formData.uploaded_file_url !== '无附件' ? `[点击下载](${formData.uploaded_file_url})` : '无附件'}\n\n` +
-                    `---\n` +
-                    `提交时间: ${new Date().toLocaleString('zh-CN')}`;
-
-                const payload = {
-                    msgtype: 'markdown',
-                    markdown: { title: 'CBAM新客户提交', text: msgContent },
-                    at: { atMobiles: salesPhone ? [salesPhone] : [], isAtAll: false }
-                };
-
-                try {
-                    fetch(DINGTALK_WEBHOOK, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload),
-                        mode: 'no-cors'
-                    }).catch(err => console.error('钉钉推送异常:', err));
-                } catch (e) { console.error('钉钉推送构建异常:', e); }
-            }
+            // 已废弃：现在统一由 Supabase 数据库端触发钉钉推送。
+            // 这样能 100% 避免浏览器的网络拦截问题，同时根治产生两条重复提交记录的问题。
         }
 
         // 原材料数据来源选择相关
