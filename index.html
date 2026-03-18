@@ -2087,7 +2087,7 @@
                 }
 
                 // 格式化价格，加千分位
-                document.getElementById('quoteTotalPrice').innerText = quoteTotal.toLocaleString();
+                document.getElementById('quoteTotalPrice').innerText = totalPrice.toLocaleString();
             }
 
             window.scrollTo({
@@ -2117,6 +2117,33 @@
                     el.classList.remove('active');
                     el.classList.remove('completed');
                 }
+            });
+        }
+
+        function prevStep(step) {
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+            document.getElementById('step' + step).classList.add('active');
+
+            // Back 也可以保存进度
+            saveProgress(step);
+
+            // Update progress indicators
+            document.querySelectorAll('.progress-step').forEach((el, index) => {
+                if (index < step - 1) {
+                    el.classList.add('completed');
+                    el.classList.remove('active');
+                } else if (index === step - 1) {
+                    el.classList.add('active');
+                    el.classList.remove('completed');
+                } else {
+                    el.classList.remove('active');
+                    el.classList.remove('completed');
+                }
+            });
+
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
             });
         }
 
