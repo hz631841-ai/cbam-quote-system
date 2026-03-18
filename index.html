@@ -2267,53 +2267,70 @@
 
         // ============ 钉钉数据同步（通过Webhook推送通知） ============
         async function syncToDingTalk(formData) {
-            // 钉钉群机器人 Webhook 地址
+            // == 原钉钉群机器人 Webhook ==
+            // （用于方案A如果继续只发群消息）
             const DINGTALK_WEBHOOK = 'https://oapi.dingtalk.com/robot/send?access_token=d90f805c508b7e1150a011987d0e6af242d48e4085e0b2a1d4a5642cd475b893';
 
-            if (!DINGTALK_WEBHOOK) {
-                console.log('钉钉 Webhook 未配置，数据仅保存到 localStorage');
+            // == 第三方低代码自动化 Webhook ==
+            // （用于方案B：通过腾讯轻联/集简云接收JSON，自动写入AI表格及@机器人）
+            // 当您在轻联创建好 Webhook 触发器后，把给您的 URL 填在这里：
+            const THIRD_PARTY_WEBHOOK = ''; // e.g., 'https://hook.jiandaoyun.com/...';
+
+            if (!DINGTALK_WEBHOOK && !THIRD_PARTY_WEBHOOK) {
+                console.log('Webhook 未配置，数据无法外部同步');
                 return;
             }
 
             // 获取业务员手机号（用于@通知）
             const salesPhone = formData.salesPhone || urlPhone || '';
 
-            // 构建 Markdown 消息
-            const msgContent = `### 📋 CBAM报价系统 - 新客户提交\n` +
-                `> **客户公司**: ${formData.companyName || '未填写'}\n> **附件**: ${formData.uploaded_file_url !== '无附件' ? `[点击下载清单](${formData.uploaded_file_url})` : '无附件'}\n\n` +
-                `> **业务员**: ${formData.salesName || '未知'}\n\n` +
-                `> **工艺类型**: ${formData.processType || '未选择'}\n\n` +
-                `> **推荐方案**: ${formData.recommendedPath || '待定'}\n\n` +
-                `> **报价金额**: ${formData.totalPrice || '待定'}\n\n` +
-                `---\n` +
-                `提交时间: ${new Date().toLocaleString('zh-CN')}`;
-
-            const payload = {
-                msgtype: 'markdown',
-                markdown: {
-                    title: 'CBAM新客户提交',
-                    text: msgContent + (salesPhone ? '\n\n@' + salesPhone : '')
-                },
-                at: {
-                    atMobiles: salesPhone ? [salesPhone] : [],
-                    isAtAll: false
+            // 1. 发送第三方平台原始 JSON 数据（支持存入表格等高级玩法）
+            if (THIRD_PARTY_WEBHOOK) {
+                try {
+                    fetch(THIRD_PARTY_WEBHOOK, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    }).catch(err => console.error("推送自动化平台异常:", err));
+                } catch (e) {
+                    console.error("低代码推送构建异常:", e);
                 }
-            };
+            }
 
-            fetch(DINGTALK_WEBHOOK, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }).then(r => r.json()).then(data => {
-                console.log('钉钉通知发送成功:', data);
-            }).catch(err => {
-                console.error('钉钉通知发送失败:', err);
-            });
+            // 2. 发送旧版直接推送钉钉 Markdown（若还需要直接推送的话）
+            if (DINGTALK_WEBHOOK) {
+                const msgContent = `### 📋 CBAM报价系统 - 新客户提交\n` +
+                    `> **客户公司**: ${formData.companyName || '未填写'}\n` +
+                    `> **附件**: ${formData.uploaded_file_url !== '无附件' ? `[点击下载清单](${formData.uploaded_file_url})` : '无附件'}\n\n` +
+                    `> **建议匹配路径**: ${formData.matchedPath === "A" ? "方案A-精简估算" : "方案B-合规实算"}\n\n` +
+                    `> **生成的预估总价**: <font color=#ff0000 size=4>${formData.quoteTotal}</font>\n\n` +
+                    `> **项目编号**: ${formData.submit_data?.['项目编号'] || formData.refNumber}\n\n` +
+                    `---\n` +
+                    `${formData.salesName !== '未指定业务员' ? `@${salesPhone || formData.salesName} ` : ''} 客户正在等候，请及时通过系统查看详情并出具正式报价单！`;
 
-            // localStorage 备份
-            const submissions = JSON.parse(localStorage.getItem('cbam_submissions') || '[]');
-            submissions.push({ ...formData, timestamp: new Date().toISOString() });
-            localStorage.setItem('cbam_submissions', JSON.stringify(submissions));
+                const msgObj = {
+                    msgtype: "markdown",
+                    markdown: {
+                        title: "CBAM 客户新报价提交",
+                        text: msgContent
+                    },
+                    at: {
+                        atMobiles: salesPhone ? [salesPhone] : [],
+                        isAtAll: false
+                    }
+                };
+
+                try {
+                    fetch(DINGTALK_WEBHOOK, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(msgObj),
+                        mode: 'no-cors'
+                    }).catch(err => console.error("钉钉推送异常:", err));
+                } catch (e) {
+                    console.error("钉钉推送构建异常:", e);
+                }
+            }
         }
     </script>
 </body>
