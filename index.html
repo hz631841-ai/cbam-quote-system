@@ -2087,11 +2087,12 @@
                 }
 
                 // 格式化价格，加千分位
-                document.getElementById('quoteTotalPrice').innerTe            // === 1. 发送数据给钉钉原生AI多维表格 ===
-                if (TABLE_WEBHOOK) {
-                    // 原有的前端发请求逻辑已完全交由 Supabase 数据库端触发器处理。
-                    // 这样能100%避免浏览器的拦截问题，同时也避免前端被修好时造成数据重复（提交两次）。
-                } p: 0, behavior: 'smooth'
+                document.getElementById('quoteTotalPrice').innerText = quoteTotal.toLocaleString();
+            }
+
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
             });
 
             // Back 也可以保存进度
