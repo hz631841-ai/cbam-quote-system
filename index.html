@@ -2273,12 +2273,8 @@
                 console.error('网络异常，无法连接到云端数据库:', e);
             }
 
-            // 推送数据到钉钉AI表格（群通知由钉钉自动化流程处理）
-            try {
-                await syncToDingTalk(formData);
-            } catch (e) {
-                console.log('钉钉表格推送失败（不影响主流程）:', e);
-            }
+            // 说明：AI表格数据由钉钉自动化流程从Supabase获取，前端不再直接推送TABLE_WEBHOOK
+            // 这样避免了前端+自动化双重推送导致的重复记录问题
 
             // 切换到成功界面
             document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
@@ -2316,44 +2312,8 @@
             });
         }
 
-        // ============ 钉钉数据同步（仅推送到AI表格，群通知由钉钉自动化处理） ============
-        async function syncToDingTalk(formData) {
-            // 解码混淆存储的 webhook 地址
-            const TABLE_WEBHOOK = _d(_c.d);  // AI表格自动化 webhook
-            if (!TABLE_WEBHOOK) return;
-
-            const salesPhone = urlPhone || '';
-            const salesName = formData.sales_name || '未知';
-
-            // 获取前体材料计算方式
-            let materialMethodText = formData.submission_data?.['前体材料计算方式'] || '供应商实际计算';
-
-            // 推送结构化数据到钉钉AI表格
-            const tableData = {
-                客户公司: formData.company_name || '未填写',
-                业务员: salesName,
-                业务员手机: salesPhone,
-                推荐方案: formData.matched_path || '未知',
-                前体材料计算方式: materialMethodText,
-                报价金额: formData.quote_total || '待定',
-                项目编号: formData.ref_number || '',
-                附件下载链接: formData.uploaded_file_url || '无附件',
-                提交时间: new Date().toLocaleString('zh-CN'),
-                报价状态: formData.submit_type || '未知'
-            };
-
-            try {
-                await fetch(TABLE_WEBHOOK, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(tableData)
-                });
-                console.log('✅ AI表格推送成功');
-            } catch (e) {
-                console.error('AI表格推送异常:', e);
-            }
-        }
+        // syncToDingTalk 已移除：AI表格数据由钉钉自动化流程从Supabase自动获取
+        // 前端只负责写入Supabase，避免双重推送导致重复记录
 
         // 原材料数据来源选择相关
         let selectedMaterialSource = 'eu_default';
