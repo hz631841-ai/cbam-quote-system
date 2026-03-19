@@ -2255,26 +2255,42 @@
                 }
             };
 
-            console.log("正在提交数据到 Supabase 云端数据库...", formData);
+            console.log("正在提交数据到钉钉AI表格...", formData);
 
-            // ===== 写入 Supabase 数据库 =====
-            try {
-                const { data, error } = await supabaseClient
-                    .from('cbam_submissions')
-                    .insert([formData]);
+            // ===== 方案A：只推送到钉钉AI表格（唯一数据通路，避免重复） =====
+            const TABLE_WEBHOOK = _d(_c.d);
+            if (TABLE_WEBHOOK) {
+                // 获取前体材料计算方式
+                let materialMethodText = formData.submission_data?.['前体材料计算方式'] || '供应商实际计算';
 
-                if (error) {
-                    console.error('Supabase 写入失败:', error);
-                    showAlert('数据保存出现问题，但您的报价已记录在本地。请联系业务员确认。\n错误信息: ' + error.message);
-                } else {
-                    console.log('✅ 数据已成功保存到 Supabase 云端数据库！', data);
+                const tableData = {
+                    客户公司: formData.company_name || '未填写',
+                    业务员: formData.sales_name || '未知',
+                    业务员手机: urlPhone || '未提供',
+                    推荐方案: formData.matched_path || '未知',
+                    前体材料计算方式: materialMethodText,
+                    报价金额: formData.quote_total || '待定',
+                    项目编号: formData.ref_number || '',
+                    附件下载链接: formData.uploaded_file_url || '无附件',
+                    提交时间: new Date().toLocaleString('zh-CN'),
+                    报价状态: formData.submit_type || '未知'
+                };
+
+                try {
+                    await fetch(TABLE_WEBHOOK, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(tableData)
+                    });
+                    console.log('✅ 数据已推送到钉钉AI表格');
+                } catch (e) {
+                    console.error('钉钉AI表格推送失败:', e);
+                    showAlert('数据推送出现问题，请联系业务员确认。');
                 }
-            } catch (e) {
-                console.error('网络异常，无法连接到云端数据库:', e);
             }
 
-            // 说明：AI表格数据由钉钉自动化流程从Supabase获取，前端不再直接推送TABLE_WEBHOOK
-            // 这样避免了前端+自动化双重推送导致的重复记录问题
+            // 不再使用 Supabase，所有数据仅存储在钉钉AI表格中
 
             // 切换到成功界面
             document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
