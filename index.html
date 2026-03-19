@@ -2254,7 +2254,12 @@
                 console.error('网络异常，无法连接到云端数据库:', e);
             }
 
-            // 已废弃：不在前端发送钉钉通知，统一由 Supabase 后端触发，避免重复。
+            // 前端发送钉钉群通知（text格式 + @人），AI表格记录由 Supabase 后端触发
+            try {
+                await syncToDingTalk(formData);
+            } catch (e) {
+                console.log('钉钉群通知发送失败（不影响主流程）:', e);
+            }
 
             // 切换到成功界面
             document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
@@ -2292,10 +2297,49 @@
             });
         }
 
-        // ============ 钉钉数据同步（通过Webhook推送通知） ============
+        // ============ 钉钉群通知（text格式 + @人） ============
         async function syncToDingTalk(formData) {
-            // 已废弃：现在统一由 Supabase 数据库端触发钉钉推送。
-            // 这样能 100% 避免浏览器的网络拦截问题，同时根治产生两条重复提交记录的问题。
+            // 使用群机器人 webhook 发送 text 格式消息
+            // text 格式是钉钉唯一支持 atMobiles @人的格式
+            const DINGTALK_WEBHOOK = _d(_c.c);
+            if (!DINGTALK_WEBHOOK) return;
+
+            const salesPhone = formData.submission_data['业务员手机'] || '';
+            const salesName = formData.sales_name || '未知';
+
+            // 构建纯文本消息内容
+            const textContent = 
+                `📋 CBAM新客户提交通知\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `业务员：${salesName}\n` +
+                `客户公司：${formData.company_name}\n` +
+                `推荐方案：${formData.matched_path}\n` +
+                `报价金额：${formData.quote_total}\n` +
+                `项目编号：${formData.ref_number}\n` +
+                `提交状态：${formData.submit_type}\n` +
+                `前体材料：${formData.submission_data['前体材料计算方式'] || '未选择'}\n` +
+                `提交时间：${new Date().toLocaleString('zh-CN')}`;
+
+            // text 格式 + atMobiles，@对应业务员
+            const payload = {
+                msgtype: 'text',
+                text: { content: textContent },
+                at: {
+                    atMobiles: salesPhone && salesPhone !== '未提供' ? [salesPhone] : [],
+                    isAtAll: false
+                }
+            };
+
+            try {
+                await fetch(DINGTALK_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                console.log('✅ 钉钉群通知已发送，@业务员:', salesName, salesPhone);
+            } catch (e) {
+                console.log('钉钉群通知发送异常（不影响主流程）:', e);
+            }
         }
 
         // 原材料数据来源选择相关
