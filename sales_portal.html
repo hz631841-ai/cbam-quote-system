@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CBAM 业务员数据查询</title>
+    <!-- 引入 Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* ============ 基础样式（与主系统一致） ============ */
+        :root {
+            --primary-color: #2d6a4f;
+            --secondary-color: #52b788;
+            --accent-gradient: linear-gradient(135deg, #2d6a4f, #52b788);
+            --bg-color: #f8fafb;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* ============ 页面头部 ============ */
+        .header {
+            background: var(--accent-gradient);
+            color: white;
+            padding: 24px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+
+        /* ============ 登录卡片 ============ */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 32px 24px;
+            box-shadow: var(--shadow);
+            margin-top: 20px;
+        }
+
+        .login-card h2 {
+            font-size: 18px;
+            color: var(--primary-color);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .login-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45,106,79,0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ============ 数据展示区 ============ */
+        .data-section {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .data-section.active {
+            display: block;
+        }
+
+        .user-info {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .user-info .name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .user-info .count {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .btn-logout {
+            padding: 6px 14px;
+            background: #f1f5f9;
+            color: var(--text-secondary);
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .btn-logout:hover {
+            background: #e2e8f0;
+        }
+
+        /* ============ 记录卡片 ============ */
+        .record-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 18px 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 12px;
+            border-left: 4px solid var(--secondary-color);
+            transition: transform 0.15s;
+        }
+
+        .record-card:hover {
+            transform: translateX(3px);
+        }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .record-company {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .record-date {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .record-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 16px;
+        }
+
+        .record-item {
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .record-item strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .record-ref {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: var(--primary-color);
+            background: #f0fdf4;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .status-tag {
+            display: inline-block;
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .status-confirmed {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .status-review {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        /* ============ 空状态 ============ */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        /* ============ 加载状态 ============ */
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ============ 错误提示 ============ */
+        .error-msg {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 14px;
+            display: none;
+        }
+
+        .error-msg.active {
+            display: block;
+        }
+
+        /* ============ 底部导航 ============ */
+        .footer-link {
+            text-align: center;
+            margin-top: 24px;
+            padding-bottom: 20px;
+        }
+
+        .footer-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .footer-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* ============ 响应式 ============ */
+        @media (max-width: 480px) {
+            .record-details {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 页面头部 -->
+    <div class="header">
+        <h1>📊 CBAM 业务数据查询</h1>
+        <p>输入你的手机号，查看你名下的客户记录</p>
+    </div>
+
+    <div class="container">
+        <!-- 登录区域 -->
+        <div id="loginSection" class="login-card">
+            <h2>🔐 身份验证</h2>
+            <p>请输入你在 CBAM 系统中登记的手机号码，系统会自动查找你名下的所有客户记录。</p>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <div class="input-group">
+                <label for="phoneInput">手机号码</label>
+                <input type="tel" id="phoneInput" placeholder="请输入你的手机号" maxlength="11"
+                    onkeypress="if(event.key==='Enter') queryRecords()">
+            </div>
+
+            <button class="btn-primary" id="queryBtn" onclick="queryRecords()">
+                查询我的记录
+            </button>
+        </div>
+
+        <!-- 数据展示区域 -->
+        <div id="dataSection" class="data-section">
+            <!-- 用户信息栏 -->
+            <div class="user-info">
+                <div>
+                    <div class="name" id="userName">--</div>
+                    <div class="count" id="recordCount">共 0 条记录</div>
+                </div>
+                <button class="btn-logout" onclick="logout()">切换账号</button>
+            </div>
+
+            <!-- 记录列表 -->
+            <div id="recordList"></div>
+        </div>
+
+        <!-- 底部链接 -->
+        <div class="footer-link">
+            <a href="index.html">← 返回 CBAM 提资分流系统</a>
+        </div>
+    </div>
+
+    <script>
+        // ============ 安全解码器（与主系统一致） ============
+        function _d(s) {
+            try { return atob(s.split('').reverse().join('')); }
+            catch (e) { return ''; }
+        }
+
+        // 混淆后的配置（与主系统共用同一份）
+        const _c = {
+            a: '==wbj5SZzFmYhBXdz5iZzlWY6NGdyhXan1GawJXbqV3cw9yL6MHc0RHa',
+            b: '==QRlNENEJURT1kUZFFMwV3TaRlVDt2YrlGeJp1a1FVS5d3RFpXQ0RXSUZzVuAzMNRzZ65ENJR1T0EkaNZTSDNGNW1WSz1ERPRTRU10MNpnTzUkaPlWUYlFcKNETpRjMiVnRtlkNJNlWzlTbjl2dplUbOhVYoB3MZBjSIVGckdlYvJkbjRHcXRmeC5WS2kUaaxmSul0cJNlW6ZUbZhmQYRmeKl2Tp10MjBnS5VmL5o0QWhFcrlkNJN0Y1IlbJNXSp5UMJpXVJpUaPl2YHJGaKlXZ'
+        };
+
+        // ============ Supabase 初始化 ============
+        const SUPABASE_URL = _d(_c.a);
+        const SUPABASE_ANON_KEY = _d(_c.b);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============ 主查询函数 ============
+        async function queryRecords() {
+            const phone = document.getElementById('phoneInput').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const queryBtn = document.getElementById('queryBtn');
+
+            // 验证手机号格式
+            if (!phone || !/^1\d{10}$/.test(phone)) {
+                errorMsg.textContent = '请输入正确的11位手机号码';
+                errorMsg.classList.add('active');
+                return;
+            }
+
+            // 清除错误提示
+            errorMsg.classList.remove('active');
+            queryBtn.disabled = true;
+            queryBtn.textContent = '查询中...';
+
+            try {
+                // 从 Supabase 查询该手机号对应的记录
+                // submission_data 是 JSONB 字段，通过 ->> 操作符提取"业务员手机"
+                const { data, error } = await supabaseClient
+                    .from('cbam_submissions')
+                    .select('*')
+                    .eq('submission_data->>业务员手机', phone)
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('查询失败:', error);
+                    errorMsg.textContent = '查询出错：' + error.message;
+                    errorMsg.classList.add('active');
+                    queryBtn.disabled = false;
+                    queryBtn.textContent = '查询我的记录';
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    errorMsg.textContent = '未找到该手机号对应的记录，请确认号码是否正确。';
+                    errorMsg.classList.add('active');
+                    queryBtn.disabled = false;
+                    queryBtn.textContent = '查询我的记录';
+                    return;
+                }
+
+                // 显示数据
+                displayRecords(data, phone);
+
+            } catch (e) {
+                console.error('网络异常:', e);
+                errorMsg.textContent = '网络连接失败，请稍后重试。';
+                errorMsg.classList.add('active');
+            }
+
+            queryBtn.disabled = false;
+            queryBtn.textContent = '查询我的记录';
+        }
+
+        // ============ 展示记录 ============
+        function displayRecords(records, phone) {
+            // 隐藏登录区域，显示数据区域
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dataSection').classList.add('active');
+
+            // 获取业务员名字（从第一条记录中提取）
+            const salesName = records[0].sales_name || '业务员';
+            document.getElementById('userName').textContent = '👤 ' + salesName;
+            document.getElementById('recordCount').textContent = `共 ${records.length} 条客户记录`;
+
+            // 记住手机号（方便返回后自动填入）
+            localStorage.setItem('cbam_sales_phone', phone);
+
+            // 渲染记录列表
+            const listEl = document.getElementById('recordList');
+            listEl.innerHTML = '';
+
+            records.forEach(record => {
+                const sd = record.submission_data || {};
+                const createdAt = record.created_at
+                    ? new Date(record.created_at).toLocaleString('zh-CN')
+                    : '未知时间';
+
+                // 判断状态类型
+                const isReview = record.submit_type && record.submit_type.includes('特殊');
+                const statusClass = isReview ? 'status-review' : 'status-confirmed';
+                const statusText = isReview ? '待复核' : '已确认';
+
+                const card = document.createElement('div');
+                card.className = 'record-card';
+                card.innerHTML = `
+                    <div class="record-header">
+                        <span class="record-company">${escapeHTML(record.company_name || '未知公司')}</span>
+                        <span class="record-date">${createdAt}</span>
+                    </div>
+                    <div class="record-details">
+                        <div class="record-item"><strong>方案：</strong>${escapeHTML(record.matched_path || '--')}</div>
+                        <div class="record-item"><strong>报价：</strong>${escapeHTML(record.quote_total || '--')}</div>
+                        <div class="record-item"><strong>编号：</strong><span class="record-ref">${escapeHTML(record.ref_number || '--')}</span></div>
+                        <div class="record-item"><strong>状态：</strong><span class="status-tag ${statusClass}">${statusText}</span></div>
+                        <div class="record-item"><strong>前体材料：</strong>${escapeHTML(sd['前体材料计算方式'] || '--')}</div>
+                        <div class="record-item"><strong>交付物：</strong>${escapeHTML(record.deliverables || '--')}</div>
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
+        // ============ 退出登录 ============
+        function logout() {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('dataSection').classList.remove('active');
+            document.getElementById('recordList').innerHTML = '';
+            localStorage.removeItem('cbam_sales_phone');
+        }
+
+        // ============ HTML转义（防XSS） ============
+        function escapeHTML(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ============ 页面加载时自动填入上次的手机号 ============
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedPhone = localStorage.getItem('cbam_sales_phone');
+            if (savedPhone) {
+                document.getElementById('phoneInput').value = savedPhone;
+            }
+        });
+    </script>
+</body>
+</html>
