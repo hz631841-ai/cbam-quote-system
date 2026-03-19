@@ -1302,8 +1302,23 @@
             if (savedDataStr) {
                 try {
                     const data = JSON.parse(savedDataStr);
-                    // 恢复工厂数据
-                    if (data.factories && data.factories.length > 0) {
+                    // 恢复批量导入的工厂数据（优先级高于手动输入）
+                    if (data.uploadedFactoryData && data.uploadedFactoryData.length > 0) {
+                        uploadedFactoryData = data.uploadedFactoryData;
+                        // 切换到上传 tab
+                        const uploadTab = document.querySelector('.tab[onclick*="upload"]');
+                        if (uploadTab) switchTab('upload', uploadTab);
+                        // 显示解析结果
+                        const totalFactories = uploadedFactoryData.length;
+                        const totalCodes = uploadedFactoryData.reduce((sum, f) => sum + (f.cnCodes ? f.cnCodes.length : 0), 0);
+                        const resultDiv = document.getElementById('excelParseResult');
+                        if (resultDiv) {
+                            resultDiv.innerHTML = `<div style="color:#059669;font-weight:bold;">✅ 已恢复上次批量导入：${totalFactories}个工厂，${totalCodes}个CN Code</div>`;
+                            resultDiv.style.display = 'block';
+                        }
+                    }
+                    // 恢复手动输入的工厂数据
+                    else if (data.factories && data.factories.length > 0) {
                         const container = document.getElementById('factoryContainer');
                         container.innerHTML = ''; // 清空默认
                         factoryCounter = 0;
@@ -1385,6 +1400,8 @@
             const data = {
                 currentStep: currentStep,
                 factories: factories,
+                // 保存批量导入的工厂数据（如果有的话）
+                uploadedFactoryData: (typeof uploadedFactoryData !== 'undefined' && uploadedFactoryData.length > 0) ? uploadedFactoryData : null,
                 processLength: document.querySelector('input[name="processLength"]:checked')?.value || '',
                 traceSupplier: document.querySelector('input[name="traceSupplier"]:checked')?.value || '',
                 motivation: document.querySelector('input[name="motivation"]:checked')?.value || '',
