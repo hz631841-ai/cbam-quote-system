@@ -1381,36 +1381,48 @@
                                 var r3 = document.querySelector('input[name="motivation"][value="' + data.motivation + '"]');
                                 if (r3) r3.checked = true;
                             }
-                            // 逐步恢复到保存的步骤
+                            // 逐步恢复到保存的步骤，在 step 2 之后立刻恢复交付物
                             for (var s = 2; s <= data.currentStep; s++) {
                                 nextStep(s, true);
-                            }
-                            // 恢复交付物选择（必须在 nextStep 生成 HTML 之后）
-                            if (data.deliverables && data.deliverables.length > 0) {
-                                // 先取消所有默认选中
-                                document.querySelectorAll('input[name="deliverableA"], input[name="deliverableB"]').forEach(function(cb) {
-                                    cb.checked = false;
-                                    if (typeof updateDeliverableUI === 'function') updateDeliverableUI(cb);
-                                });
-                                // 再勾选保存的项
-                                data.deliverables.forEach(function(val) {
-                                    var cb = document.querySelector('input[name="deliverableA"][value="' + val + '"], input[name="deliverableB"][value="' + val + '"]');
-                                    if (cb) {
-                                        cb.checked = true;
+                                // step 2 生成了交付物HTML，必须在这里立刻恢复（不能等循环结束，否则step3可能覆盖DOM）
+                                if (s === 2 && data.deliverables && data.deliverables.length > 0) {
+                                    var allCbs = document.querySelectorAll('input[name="deliverableA"], input[name="deliverableB"]');
+                                    console.log('[进度恢复] 找到交付物checkbox数量:', allCbs.length);
+                                    // 先取消所有默认选中
+                                    allCbs.forEach(function(cb) {
+                                        cb.checked = false;
                                         if (typeof updateDeliverableUI === 'function') updateDeliverableUI(cb);
-                                    }
-                                });
-                                // 更新附加费计算
-                                var path = data.finalPath || 'A';
-                                if (typeof updateDeliverableSurcharge === 'function') updateDeliverableSurcharge(path);
-                                console.log('[进度恢复] 已恢复交付物选择:', data.deliverables);
-                            }
-                            // 恢复原材料计算方式
-                            if (data.materialSource) {
-                                selectedMaterialSource = data.materialSource;
-                                var matRadio = document.querySelector('input[name="materialSource"][value="' + data.materialSource + '"]');
-                                if (matRadio) { matRadio.checked = true; highlightMaterialOption(matRadio.closest('label')); }
-                                console.log('[进度恢复] 已恢复原材料计算方式:', data.materialSource);
+                                    });
+                                    // 再勾选保存的项
+                                    var restored = 0;
+                                    data.deliverables.forEach(function(val) {
+                                        var cb = document.querySelector('input[name="deliverableA"][value="' + val + '"], input[name="deliverableB"][value="' + val + '"]');
+                                        if (cb) {
+                                            cb.checked = true;
+                                            if (typeof updateDeliverableUI === 'function') updateDeliverableUI(cb);
+                                            restored++;
+                                            console.log('[进度恢复] 勾选交付物:', val);
+                                        } else {
+                                            console.warn('[进度恢复] 未找到交付物checkbox, value=', val);
+                                        }
+                                    });
+                                    // 更新附加费显示
+                                    var path = data.finalPath || 'A';
+                                    if (typeof updateDeliverableSurcharge === 'function') updateDeliverableSurcharge(path);
+                                    console.log('[进度恢复] 已恢复交付物:', restored + '/' + data.deliverables.length, '附加费将在step3重新计算');
+                                }
+                                // 在 step 2 之后恢复原材料计算方式
+                                if (s === 2 && data.materialSource) {
+                                    selectedMaterialSource = data.materialSource;
+                                    var matRadio = document.querySelector('input[name="materialSource"][value="' + data.materialSource + '"]');
+                                    if (matRadio) { matRadio.checked = true; if(typeof highlightMaterialOption === 'function') highlightMaterialOption(matRadio.closest('label')); }
+                                    console.log('[进度恢复] 已恢复原材料计算方式:', data.materialSource);
+                                }
+                                // 恢复 finalPath 变量（影响 step3 的附加费计算）
+                                if (s === 2 && data.finalPath) {
+                                    finalPath = data.finalPath;
+                                    console.log('[进度恢复] 已恢复方案路径:', finalPath);
+                                }
                             }
                             console.log('[进度恢复] 已跳转到步骤', data.currentStep);
                         } else {
@@ -1848,6 +1860,7 @@
             } else {
                 label.classList.remove('checked');
             }
+            saveProgress(2);
         }
 
         // 计算交付物附加费（超过1项，每多1项加1000元）
@@ -2382,7 +2395,9 @@
                         // 直接用 fetch 调用 Supabase Storage REST API
                         const encodedPath = filePath.split('/').map(s => encodeURIComponent(s)).join('/');
                         const uploadUrl = `${SUPABASE_URL}/storage/v1/object/cbam-site/${encodedPath}`;
-                        console.log(`[文件上传] 完整URL: ${uploadUrl}`);
+                        // 用 Blob 包装 File，剥离 File 元数据（name/lastModified），防止 '; ' 泄露到 key 中
+                        const fileBlob = new Blob([item.file], {type: item.file.type || 'application/octet-stream'});
+                        console.log(`[文件上传] URL: ${uploadUrl}, Blob大小: ${fileBlob.size}`);
                         const uploadResp = await fetch(uploadUrl, {
                             method: 'POST',
                             headers: {
@@ -2391,7 +2406,7 @@
                                 'Content-Type': item.file.type || 'application/octet-stream',
                                 'x-upsert': 'true'
                             },
-                            body: item.file
+                            body: fileBlob
                         });
 
                         if (!uploadResp.ok) {
@@ -2424,7 +2439,7 @@
                     ).join(' | ') || '未填写',
                     交付物: formData.deliverables || '未选择',
                     // 附件下载链接（来自 Supabase Storage）
-                    附件下载链接: fileLinks.length > 0 ? fileLinks.join(' ；') : '无附件',
+                    附件下载链接: fileLinks.length > 0 ? fileLinks.join('\n') : '无附件',
                     提交时间: new Date().toLocaleString('zh-CN'),
                     报价状态: formData.submit_type || '未知'
                 };
@@ -2514,6 +2529,7 @@
                 selectedMaterialSource = selected.value;
             }
             document.getElementById('materialSourceModal').style.display = 'none';
+            saveProgress(2);
         }
 
     </script>
