@@ -2292,7 +2292,7 @@
 
                         const { data: uploadData, error: uploadError } = await supabaseClient
                             .storage
-                            .from('cbam-files')
+                            .from('cbam-site')
                             .upload(filePath, item.file, { upsert: true });
 
                         if (uploadError) {
@@ -2302,7 +2302,7 @@
                             // 获取公开下载链接
                             const { data: urlData } = supabaseClient
                                 .storage
-                                .from('cbam-files')
+                                .from('cbam-site')
                                 .getPublicUrl(filePath);
                             const publicUrl = urlData?.publicUrl || '链接获取失败';
                             fileLinks.push(publicUrl);
