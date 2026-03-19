@@ -2263,6 +2263,57 @@
                 // 获取前体材料计算方式
                 let materialMethodText = formData.submission_data?.['前体材料计算方式'] || '供应商实际计算';
 
+                // ===== 上传附件到 Supabase Storage（仅存文件，不写数据库表） =====
+                let fileLinks = []; // 存储所有附件的下载链接
+                const filesToUpload = []; // 收集需要上传的文件
+
+                // 方案A数据收集表
+                const fileAInput = document.getElementById('fileA');
+                if (fileAInput && fileAInput.files && fileAInput.files[0]) {
+                    filesToUpload.push({ file: fileAInput.files[0], label: '数据收集表' });
+                }
+                // 方案A交付物附件
+                const delivFileA = document.getElementById('deliverableFileA');
+                if (delivFileA && delivFileA.files && delivFileA.files[0]) {
+                    filesToUpload.push({ file: delivFileA.files[0], label: '交付物附件A' });
+                }
+                // 方案B交付物附件
+                const delivFileB = document.getElementById('deliverableFileB');
+                if (delivFileB && delivFileB.files && delivFileB.files[0]) {
+                    filesToUpload.push({ file: delivFileB.files[0], label: '交付物附件B' });
+                }
+
+                // 逐个上传文件到 Supabase Storage
+                for (const item of filesToUpload) {
+                    try {
+                        // 生成唯一文件名：项目编号_标签_原文件名
+                        const safeName = `${refNumber}_${item.label}_${item.file.name}`;
+                        const filePath = `cbam-uploads/${safeName}`;
+
+                        const { data: uploadData, error: uploadError } = await supabaseClient
+                            .storage
+                            .from('cbam-files')
+                            .upload(filePath, item.file, { upsert: true });
+
+                        if (uploadError) {
+                            console.error(`文件 ${item.label} 上传失败:`, uploadError);
+                            fileLinks.push(`${item.label}: 上传失败`);
+                        } else {
+                            // 获取公开下载链接
+                            const { data: urlData } = supabaseClient
+                                .storage
+                                .from('cbam-files')
+                                .getPublicUrl(filePath);
+                            const publicUrl = urlData?.publicUrl || '链接获取失败';
+                            fileLinks.push(publicUrl);
+                            console.log(`✅ ${item.label} 上传成功:`, publicUrl);
+                        }
+                    } catch (e) {
+                        console.error(`文件上传异常:`, e);
+                        fileLinks.push(`${item.label}: 上传异常`);
+                    }
+                }
+
                 const tableData = {
                     客户公司: formData.company_name || '未填写',
                     业务员: formData.sales_name || '未知',
@@ -2271,11 +2322,13 @@
                     前体材料计算方式: materialMethodText,
                     报价金额: formData.quote_total || '待定',
                     项目编号: formData.ref_number || '',
-                    // 将工厂和CN Code数据提取为可读文本
+                    // 工厂和CN Code数据提取为可读文本
                     工厂及产品信息: (formData.factories || []).map(f =>
                         `工厂${f.factory_index}: CN Code [${(f.cn_codes || []).join(', ')}]`
                     ).join(' | ') || '未填写',
                     交付物: formData.deliverables || '未选择',
+                    // 附件下载链接（来自 Supabase Storage）
+                    附件下载链接: fileLinks.length > 0 ? fileLinks.join(' ；') : '无附件',
                     提交时间: new Date().toLocaleString('zh-CN'),
                     报价状态: formData.submit_type || '未知'
                 };
