@@ -1703,7 +1703,8 @@
         });
 
         // 监听文件上传，解析Excel内容提取工厂和CN Code
-        uploadedFactoryData = []; // 存储从Excel解析出的工厂数据（已在前面声明）
+        // 注意：不能在这里重置 uploadedFactoryData，因为 loadProgress() 可能已经恢复了数据
+        // uploadedFactoryData 已在1299行初始化为[]，loadProgress可能已填充数据
         document.getElementById('cnCodeFile').addEventListener('change', function (e) {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
@@ -2340,12 +2341,15 @@
                         console.log(`文件大小: ${item.file.size} 字节, 类型: ${item.file.type}`);
 
                         // 直接用 fetch 调用 Supabase Storage REST API
-                        const uploadUrl = `${SUPABASE_URL}/storage/v1/object/cbam-site/${filePath}`;
+                        const encodedPath = filePath.split('/').map(s => encodeURIComponent(s)).join('/');
+                        const uploadUrl = `${SUPABASE_URL}/storage/v1/object/cbam-site/${encodedPath}`;
+                        console.log(`[文件上传] 完整URL: ${uploadUrl}`);
                         const uploadResp = await fetch(uploadUrl, {
                             method: 'POST',
                             headers: {
                                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
                                 'apikey': SUPABASE_ANON_KEY,
+                                'Content-Type': item.file.type || 'application/octet-stream',
                                 'x-upsert': 'true'
                             },
                             body: item.file
