@@ -422,11 +422,11 @@
 
             try {
                 // 从 Supabase 查询该手机号对应的记录
-                // submission_data 是 JSONB 字段，通过 ->> 操作符提取"业务员手机"
+                // 使用 JSONB 的 @> 包含操作符（比 ->> 对中文key兼容性更好）
                 const { data, error } = await supabaseClient
                     .from('cbam_submissions')
                     .select('*')
-                    .eq('submission_data->>业务员手机', phone)
+                    .contains('submission_data', { '业务员手机': phone })
                     .order('created_at', { ascending: false });
 
                 if (error) {
