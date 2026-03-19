@@ -2166,7 +2166,26 @@
         const SUPABASE_ANON_KEY = _d(_c.b);
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // 防重复提交锁
+        let _isSubmitting = false;
+
         async function submitQuote(type) {
+            // 防止重复提交（双击/网络延迟导致用户多次点击）
+            if (_isSubmitting) {
+                console.log('⚠️ 正在提交中，请勿重复点击');
+                return;
+            }
+            _isSubmitting = true;
+
+            // 立即禁用所有提交按钮，防止重复点击
+            document.querySelectorAll('button[onclick*="submitQuote"]').forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
+                btn.dataset.originalText = btn.innerText;
+                btn.innerText = '⏳ 正在提交...';
+            });
+
             // 保存当前进度
             saveProgress(3);
 
@@ -2254,11 +2273,11 @@
                 console.error('网络异常，无法连接到云端数据库:', e);
             }
 
-            // 前端发送钉钉群通知（text格式 + @人），AI表格记录由 Supabase 后端触发
+            // 推送数据到钉钉AI表格（群通知由钉钉自动化流程处理）
             try {
                 await syncToDingTalk(formData);
             } catch (e) {
-                console.log('钉钉群通知发送失败（不影响主流程）:', e);
+                console.log('钉钉表格推送失败（不影响主流程）:', e);
             }
 
             // 切换到成功界面
@@ -2297,82 +2316,42 @@
             });
         }
 
-        // ============ 钉钉数据同步（TABLE_WEBHOOK + 群机器人text格式@人） ============
+        // ============ 钉钉数据同步（仅推送到AI表格，群通知由钉钉自动化处理） ============
         async function syncToDingTalk(formData) {
             // 解码混淆存储的 webhook 地址
-            const DINGTALK_WEBHOOK = _d(_c.c);  // 群机器人 webhook
-            const TABLE_WEBHOOK = _d(_c.d);      // AI表格自动化 webhook
+            const TABLE_WEBHOOK = _d(_c.d);  // AI表格自动化 webhook
+            if (!TABLE_WEBHOOK) return;
 
-            const salesPhone = formData.salesPhone || urlPhone || '';
+            const salesPhone = urlPhone || '';
             const salesName = formData.sales_name || '未知';
 
-            // === 1. 推送数据到钉钉AI表格（自动化连接器） ===
-            if (TABLE_WEBHOOK) {
-                try {
-                    // 获取前体材料计算方式
-                    var materialMethodText = '供应商实际计算';
-                    var complianceRadio = document.querySelector('input[name="motivation"][value="compliance"]');
-                    if (complianceRadio && complianceRadio.checked && typeof selectedMaterialSource !== 'undefined') {
-                        if (selectedMaterialSource === 'eu_default') materialMethodText = '欧盟征收期默认值';
-                        else if (selectedMaterialSource === 'industry_exp') materialMethodText = '行业经验值';
-                        else if (selectedMaterialSource === 'supplier_data') materialMethodText = '供应商提供的产品碳足迹信息';
-                    }
+            // 获取前体材料计算方式
+            let materialMethodText = formData.submission_data?.['前体材料计算方式'] || '供应商实际计算';
 
-                    const tableData = {
-                        客户公司: formData.company_name || '未填写',
-                        业务员: salesName,
-                        业务员手机: salesPhone,
-                        推荐方案: formData.matched_path || '未知',
-                        前体材料计算方式: materialMethodText,
-                        报价金额: formData.quote_total || '待定',
-                        项目编号: formData.ref_number || '',
-                        附件下载链接: formData.uploaded_file_url || '无附件',
-                        提交时间: new Date().toLocaleString('zh-CN'),
-                        报价状态: formData.submit_type || '未知'
-                    };
-                    fetch(TABLE_WEBHOOK, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(tableData)
-                    }).then(res => console.log('✅ AI表格推送成功:', res.status))
-                        .catch(err => console.error('AI表格推送失败:', err));
-                } catch (e) { console.error('AI表格推送异常:', e); }
-            }
+            // 推送结构化数据到钉钉AI表格
+            const tableData = {
+                客户公司: formData.company_name || '未填写',
+                业务员: salesName,
+                业务员手机: salesPhone,
+                推荐方案: formData.matched_path || '未知',
+                前体材料计算方式: materialMethodText,
+                报价金额: formData.quote_total || '待定',
+                项目编号: formData.ref_number || '',
+                附件下载链接: formData.uploaded_file_url || '无附件',
+                提交时间: new Date().toLocaleString('zh-CN'),
+                报价状态: formData.submit_type || '未知'
+            };
 
-            // === 2. 发送 text 格式群通知（支持 @业务员手机号） ===
-            if (DINGTALK_WEBHOOK) {
-                const textContent = 
-                    `📋 CBAM新客户提交通知\n` +
-                    `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                    `业务员：${salesName}\n` +
-                    `客户公司：${formData.company_name || '未填写'}\n` +
-                    `推荐方案：${formData.matched_path || '未知'}\n` +
-                    `报价金额：${formData.quote_total || '待定'}\n` +
-                    `项目编号：${formData.ref_number || ''}\n` +
-                    `提交状态：${formData.submit_type || '未知'}\n` +
-                    `提交时间：${new Date().toLocaleString('zh-CN')}`;
-
-                // text 格式 + atMobiles 是钉钉唯一支持 @人 的方式
-                const payload = {
-                    msgtype: 'text',
-                    text: { content: textContent },
-                    at: {
-                        atMobiles: salesPhone && salesPhone !== '未提供' ? [salesPhone] : [],
-                        isAtAll: false
-                    }
-                };
-
-                try {
-                    await fetch(DINGTALK_WEBHOOK, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    console.log('✅ 钉钉群通知已发送，@业务员:', salesName, salesPhone);
-                } catch (e) {
-                    console.log('钉钉群通知发送异常（不影响主流程）:', e);
-                }
+            try {
+                await fetch(TABLE_WEBHOOK, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(tableData)
+                });
+                console.log('✅ AI表格推送成功');
+            } catch (e) {
+                console.error('AI表格推送异常:', e);
             }
         }
 
