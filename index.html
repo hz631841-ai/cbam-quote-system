@@ -1298,7 +1298,8 @@
         // ==== 【新增】状态持久化逻辑 - 加载进度 ====
         var uploadedFactoryData = []; // 提前声明，避免 loadProgress 中访问时报错
         function loadProgress() {
-            if (!urlCompany) return;
+            console.log('[进度恢复] 开始加载, urlCompany=', urlCompany);
+            if (!urlCompany) { console.log('[进度恢复] 没有 company 参数，跳过'); return; }
             const savedDataStr = localStorage.getItem("cbamProgress_" + urlCompany);
             if (savedDataStr) {
                 try {
@@ -1386,28 +1387,33 @@
 
         // ==== 【新增】状态持久化逻辑 - 保存进度 ====
         function saveProgress(currentStep) {
-            if (!urlCompany) return;
-            const factories = [];
-            document.querySelectorAll('.factory-box').forEach(box => {
-                let codesArr = [];
-                box.querySelectorAll('.product-cn-code').forEach(input => {
-                    if (input.value.trim()) codesArr.push(input.value.trim());
+            try {
+                if (!urlCompany) { console.log('[进度保存] 没有 company 参数，跳过'); return; }
+                const factories = [];
+                document.querySelectorAll('.factory-box').forEach(box => {
+                    let codesArr = [];
+                    box.querySelectorAll('.product-cn-code').forEach(input => {
+                        if (input.value.trim()) codesArr.push(input.value.trim());
+                    });
+                    factories.push({
+                        name: box.querySelector('.factory-name').value || '',
+                        codes: codesArr.join(',')
+                    });
                 });
-                factories.push({
-                    name: box.querySelector('.factory-name').value || '',
-                    codes: codesArr.join(',')
-                });
-            });
-            const data = {
-                currentStep: currentStep,
-                factories: factories,
-                // 保存批量导入的工厂数据（如果有的话）
-                uploadedFactoryData: (typeof uploadedFactoryData !== 'undefined' && uploadedFactoryData.length > 0) ? uploadedFactoryData : null,
-                processLength: document.querySelector('input[name="processLength"]:checked')?.value || '',
-                traceSupplier: document.querySelector('input[name="traceSupplier"]:checked')?.value || '',
-                motivation: document.querySelector('input[name="motivation"]:checked')?.value || '',
-            };
-            localStorage.setItem("cbamProgress_" + urlCompany, JSON.stringify(data));
+                const hasUploadData = uploadedFactoryData && uploadedFactoryData.length > 0;
+                const data = {
+                    currentStep: currentStep,
+                    factories: factories,
+                    uploadedFactoryData: hasUploadData ? uploadedFactoryData : null,
+                    processLength: document.querySelector('input[name="processLength"]:checked')?.value || '',
+                    traceSupplier: document.querySelector('input[name="traceSupplier"]:checked')?.value || '',
+                    motivation: document.querySelector('input[name="motivation"]:checked')?.value || '',
+                };
+                localStorage.setItem("cbamProgress_" + urlCompany, JSON.stringify(data));
+                console.log(`[进度保存] 步骤${currentStep}, 手动工厂${factories.length}个, 批量导入${hasUploadData ? uploadedFactoryData.length + '个工厂' : '无'}`);
+            } catch (e) {
+                console.error('[进度保存] 失败:', e.message || e);
+            }
         }
 
         if (urlSales && urlCompany) {
@@ -2285,6 +2291,11 @@
                 let fileLinks = []; // 存储所有附件的下载链接
                 const filesToUpload = []; // 收集需要上传的文件
 
+                // 批量导入的工厂CN Code表格
+                const cnCodeFileInput = document.getElementById('cnCodeFile');
+                if (cnCodeFileInput && cnCodeFileInput.files && cnCodeFileInput.files[0]) {
+                    filesToUpload.push({ file: cnCodeFileInput.files[0], label: '工厂CN_Code表' });
+                }
                 // 方案A数据收集表
                 const fileAInput = document.getElementById('fileA');
                 if (fileAInput && fileAInput.files && fileAInput.files[0]) {
@@ -2300,6 +2311,7 @@
                 if (delivFileB && delivFileB.files && delivFileB.files[0]) {
                     filesToUpload.push({ file: delivFileB.files[0], label: '交付物附件B' });
                 }
+                console.log(`[文件上传] 待上传文件数: ${filesToUpload.length}`, filesToUpload.map(f => f.label));
 
                 // 逐个上传文件到 Supabase Storage（使用 fetch 直接调 REST API）
                 for (let fi = 0; fi < filesToUpload.length; fi++) {
