@@ -1301,87 +1301,100 @@
             console.log('[进度恢复] 开始加载, urlCompany=', urlCompany);
             if (!urlCompany) { console.log('[进度恢复] 没有 company 参数，跳过'); return; }
             const savedDataStr = localStorage.getItem("cbamProgress_" + urlCompany);
-            if (savedDataStr) {
-                try {
-                    const data = JSON.parse(savedDataStr);
-                    // 恢复批量导入的工厂数据（优先级高于手动输入）
-                    if (data.uploadedFactoryData && data.uploadedFactoryData.length > 0) {
-                        uploadedFactoryData = data.uploadedFactoryData;
-                        // 切换到上传 tab
-                        const uploadTab = document.querySelector('.tab[onclick*="upload"]');
-                        if (uploadTab) switchTab('upload', uploadTab);
-                        // 显示解析结果
-                        const totalFactories = uploadedFactoryData.length;
-                        const totalCodes = uploadedFactoryData.reduce((sum, f) => sum + (f.cnCodes ? f.cnCodes.length : 0), 0);
-                        const resultDiv = document.getElementById('excelParseResult');
-                        if (resultDiv) {
-                            resultDiv.innerHTML = `<div style="color:#059669;font-weight:bold;">✅ 已恢复上次批量导入：${totalFactories}个工厂，${totalCodes}个CN Code</div>`;
-                            resultDiv.style.display = 'block';
-                        }
-                    }
-                    // 恢复手动输入的工厂数据
-                    else if (data.factories && data.factories.length > 0) {
-                        const container = document.getElementById('factoryContainer');
-                        container.innerHTML = ''; // 清空默认
-                        factoryCounter = 0;
-                        data.factories.forEach(f => {
-                            factoryCounter++;
-                            const newBox = document.createElement('div');
-                            newBox.className = 'factory-box';
-                            const productsHtml = f.codes.split(',').map(code => `
-                            <div class="product-item">
-                                <input type="text" class="product-cn-code" autocomplete="off"
-                                    placeholder="请输入或选择8位CN Code" required value="${escapeHTML(code)}">
-                            </div>
-                            `).join('');
-                            const deleteBtn = factoryCounter > 1 ? `<button type="button" class="remove-factory"
-                                onclick="this.parentElement.remove(); updateFactoryIndexes(); checkAllCNCodes();">✖
-                                删除工厂</button>` : '';
-                            newBox.innerHTML = `
-                            ${deleteBtn}
-                            <span class="factory-title" style="font-weight: bold; color: #475569; margin-bottom: 8px; display:inline-block;">工厂/厂区 ${factoryCounter}</span>
-                            <input type="text" class="factory-name" placeholder="请输入工厂名称（如：喷涂车间/第二分厂）" required style="margin-bottom: 15px;" value="${escapeHTML(f.name)}">
-                            <div class="products-container">
-                                ${productsHtml}
-                            </div>
-                            <button type="button" class="add-product-btn" onclick="addProduct(this)">+ 新增产品 (CN Code)</button>
-                            `;
-                            container.appendChild(newBox);
-                            newBox.querySelectorAll('.product-cn-code').forEach(function (input) { if (typeof setupCNCodeAutocomplete === 'function') setupCNCodeAutocomplete(input); });
-                        });
-                        checkAllCNCodes();
-                    }
+            if (!savedDataStr) { console.log('[进度恢复] 没有已保存的数据'); return; }
+            try {
+                const data = JSON.parse(savedDataStr);
+                console.log('[进度恢复] 读取到的数据:', JSON.stringify({
+                    step: data.currentStep,
+                    factoriesCount: data.factories ? data.factories.length : 0,
+                    uploadedCount: data.uploadedFactoryData ? data.uploadedFactoryData.length : 0,
+                    processLength: data.processLength,
+                    traceSupplier: data.traceSupplier,
+                    motivation: data.motivation
+                }));
 
-                    // 弹出提示框，用户确认后才恢复单选按钮和步骤
-                    if (data.currentStep && data.currentStep > 1) {
-                        setTimeout(() => {
-                            if (confirm("检测到贵司上次有未完成的填报进度（停留在第 " + data.currentStep + " 步）。\\n是否立即恢复至该记录？")) {
-                                // 用户确认恢复，先恢复单选按钮状态
-                                if (data.processLength) {
-                                    const r1 = document.querySelector('input[name="processLength"][value="' + data.processLength + '"]');
-                                    if (r1) { r1.checked = true; r1.dispatchEvent(new Event('change')); }
-                                }
-                                if (data.traceSupplier) {
-                                    const r2 = document.querySelector('input[name="traceSupplier"][value="' + data.traceSupplier + '"]');
-                                    if (r2) r2.checked = true;
-                                }
-                                if (data.motivation) {
-                                    const r3 = document.querySelector('input[name="motivation"][value="' + data.motivation + '"]');
-                                    if (r3) r3.checked = true;
-                                }
-                                // 逐步恢复到保存的步骤
-                                for (let s = 2; s <= data.currentStep; s++) {
-                                    nextStep(s, true);
-                                }
-                            } else {
-                                // 用户选择不恢复，清除保存的进度数据
-                                localStorage.removeItem("cbamProgress_" + urlCompany);
-                            }
-                        }, 600);
+                // 1. 恢复批量导入的工厂数据（优先级高于手动输入）
+                if (data.uploadedFactoryData && data.uploadedFactoryData.length > 0) {
+                    uploadedFactoryData = data.uploadedFactoryData;
+                    // 切换到上传 tab
+                    const uploadTab = document.querySelector('.tab[onclick*="upload"]');
+                    if (uploadTab) switchTab('upload', uploadTab);
+                    // 显示解析结果
+                    const totalFactories = uploadedFactoryData.length;
+                    const totalCodes = uploadedFactoryData.reduce((sum, f) => sum + (f.cnCodes ? f.cnCodes.length : 0), 0);
+                    const resultDiv = document.getElementById('excelParseResult');
+                    if (resultDiv) {
+                        resultDiv.innerHTML = `<div style="color:#059669;font-weight:bold;">✅ 已恢复上次批量导入：${totalFactories}个工厂，${totalCodes}个CN Code</div>`;
+                        resultDiv.style.display = 'block';
                     }
-                } catch (e) {
-                    console.log("加载进度失败", e);
+                    console.log('[进度恢复] 已恢复批量导入数据:', totalFactories, '个工厂', totalCodes, '个CN Code');
                 }
+                // 2. 恢复手动输入的工厂数据
+                else if (data.factories && data.factories.length > 0) {
+                    const container = document.getElementById('factoryContainer');
+                    container.innerHTML = ''; // 清空默认
+                    factoryCounter = 0;
+                    data.factories.forEach(f => {
+                        factoryCounter++;
+                        const newBox = document.createElement('div');
+                        newBox.className = 'factory-box';
+                        const productsHtml = f.codes.split(',').map(code => `
+                        <div class="product-item">
+                            <input type="text" class="product-cn-code" autocomplete="off"
+                                placeholder="请输入或选择8位CN Code" required value="${escapeHTML(code)}">
+                        </div>
+                        `).join('');
+                        const deleteBtn = factoryCounter > 1 ? `<button type="button" class="remove-factory"
+                            onclick="this.parentElement.remove(); updateFactoryIndexes(); checkAllCNCodes();">✖
+                            删除工厂</button>` : '';
+                        newBox.innerHTML = `
+                        ${deleteBtn}
+                        <span class="factory-title" style="font-weight: bold; color: #475569; margin-bottom: 8px; display:inline-block;">工厂/厂区 ${factoryCounter}</span>
+                        <input type="text" class="factory-name" placeholder="请输入工厂名称（如：喷涂车间/第二分厂）" required style="margin-bottom: 15px;" value="${escapeHTML(f.name)}">
+                        <div class="products-container">
+                            ${productsHtml}
+                        </div>
+                        <button type="button" class="add-product-btn" onclick="addProduct(this)">+ 新增产品 (CN Code)</button>
+                        `;
+                        container.appendChild(newBox);
+                        newBox.querySelectorAll('.product-cn-code').forEach(function (input) { if (typeof setupCNCodeAutocomplete === 'function') setupCNCodeAutocomplete(input); });
+                    });
+                    checkAllCNCodes();
+                    console.log('[进度恢复] 已恢复手动工厂数据:', data.factories.length, '个工厂');
+                }
+
+                // 3. 弹出提示框，用户确认后恢复单选按钮和步骤跳转
+                if (data.currentStep && data.currentStep > 1) {
+                    setTimeout(function() {
+                        var msg = "检测到贵司上次有未完成的填报进度（停留在第 " + data.currentStep + " 步）。\n是否立即恢复至该记录？";
+                        if (confirm(msg)) {
+                            // 用户确认恢复，先恢复单选按钮状态
+                            if (data.processLength) {
+                                var r1 = document.querySelector('input[name="processLength"][value="' + data.processLength + '"]');
+                                if (r1) { r1.checked = true; r1.dispatchEvent(new Event('change')); }
+                            }
+                            if (data.traceSupplier) {
+                                var r2 = document.querySelector('input[name="traceSupplier"][value="' + data.traceSupplier + '"]');
+                                if (r2) r2.checked = true;
+                            }
+                            if (data.motivation) {
+                                var r3 = document.querySelector('input[name="motivation"][value="' + data.motivation + '"]');
+                                if (r3) r3.checked = true;
+                            }
+                            // 逐步恢复到保存的步骤
+                            for (var s = 2; s <= data.currentStep; s++) {
+                                nextStep(s, true);
+                            }
+                            console.log('[进度恢复] 已跳转到步骤', data.currentStep);
+                        } else {
+                            // 用户选择不恢复，清除保存的进度数据
+                            localStorage.removeItem("cbamProgress_" + urlCompany);
+                            console.log('[进度恢复] 用户选择不恢复，已清除进度数据');
+                        }
+                    }, 600);
+                }
+            } catch (e) {
+                console.error("[进度恢复] 加载进度失败", e);
             }
         }
 
