@@ -2271,7 +2271,11 @@
                     前体材料计算方式: materialMethodText,
                     报价金额: formData.quote_total || '待定',
                     项目编号: formData.ref_number || '',
-                    附件下载链接: formData.uploaded_file_url || '无附件',
+                    // 将工厂和CN Code数据提取为可读文本
+                    工厂及产品信息: (formData.factories || []).map(f =>
+                        `工厂${f.factory_index}: CN Code [${(f.cn_codes || []).join(', ')}]`
+                    ).join(' | ') || '未填写',
+                    交付物: formData.deliverables || '未选择',
                     提交时间: new Date().toLocaleString('zh-CN'),
                     报价状态: formData.submit_type || '未知'
                 };
