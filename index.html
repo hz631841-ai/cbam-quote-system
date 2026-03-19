@@ -2355,7 +2355,8 @@
 
                 // ===== 上传附件到 Supabase Storage（仅存文件，不写数据库表） =====
                 // 先读取之前已上传并保存的链接（刷新后文件框被清空时，可从缓存中恢复）
-                const _savedLinks = company ? JSON.parse(localStorage.getItem('cbamFileLinks_' + company) || '[]') : [];
+                // 使用 urlCompany（URL 参数）而非 company（DOM值）作为 key，两者必须一致才能正确匹配
+                const _savedLinks = urlCompany ? JSON.parse(localStorage.getItem('cbamFileLinks_' + urlCompany) || '[]') : [];
                 let fileLinks = [..._savedLinks]; // 以历史链接作为初始值
                 const filesToUpload = []; // 收集需要上传的文件
 
@@ -2421,10 +2422,11 @@
                             fileLinks.push(publicUrl);
                             console.log(`✅ ${item.label} 上传成功:`, publicUrl);
                             // 上传成功后立即保存到 localStorage，防止刷新后丢失
-                            if (company) {
-                                const existingLinks = JSON.parse(localStorage.getItem('cbamFileLinks_' + company) || '[]');
+                            // 使用 urlCompany（URL 参数）作为 key，和进度存储 key 保持一致
+                            if (urlCompany) {
+                                const existingLinks = JSON.parse(localStorage.getItem('cbamFileLinks_' + urlCompany) || '[]');
                                 if (!existingLinks.includes(publicUrl)) existingLinks.push(publicUrl);
-                                localStorage.setItem('cbamFileLinks_' + company, JSON.stringify(existingLinks));
+                                localStorage.setItem('cbamFileLinks_' + urlCompany, JSON.stringify(existingLinks));
                             }
                         }
                     } catch (e) {
