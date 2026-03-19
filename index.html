@@ -1385,6 +1385,33 @@
                             for (var s = 2; s <= data.currentStep; s++) {
                                 nextStep(s, true);
                             }
+                            // 恢复交付物选择（必须在 nextStep 生成 HTML 之后）
+                            if (data.deliverables && data.deliverables.length > 0) {
+                                // 先取消所有默认选中
+                                document.querySelectorAll('input[name="deliverableA"], input[name="deliverableB"]').forEach(function(cb) {
+                                    cb.checked = false;
+                                    if (typeof updateDeliverableUI === 'function') updateDeliverableUI(cb);
+                                });
+                                // 再勾选保存的项
+                                data.deliverables.forEach(function(val) {
+                                    var cb = document.querySelector('input[name="deliverableA"][value="' + val + '"], input[name="deliverableB"][value="' + val + '"]');
+                                    if (cb) {
+                                        cb.checked = true;
+                                        if (typeof updateDeliverableUI === 'function') updateDeliverableUI(cb);
+                                    }
+                                });
+                                // 更新附加费计算
+                                var path = data.finalPath || 'A';
+                                if (typeof updateDeliverableSurcharge === 'function') updateDeliverableSurcharge(path);
+                                console.log('[进度恢复] 已恢复交付物选择:', data.deliverables);
+                            }
+                            // 恢复原材料计算方式
+                            if (data.materialSource) {
+                                selectedMaterialSource = data.materialSource;
+                                var matRadio = document.querySelector('input[name="materialSource"][value="' + data.materialSource + '"]');
+                                if (matRadio) { matRadio.checked = true; highlightMaterialOption(matRadio.closest('label')); }
+                                console.log('[进度恢复] 已恢复原材料计算方式:', data.materialSource);
+                            }
                             console.log('[进度恢复] 已跳转到步骤', data.currentStep);
                         } else {
                             // 用户选择不恢复，清除保存的进度数据
@@ -1421,6 +1448,18 @@
                     processLength: document.querySelector('input[name="processLength"]:checked')?.value || '',
                     traceSupplier: document.querySelector('input[name="traceSupplier"]:checked')?.value || '',
                     motivation: document.querySelector('input[name="motivation"]:checked')?.value || '',
+                    // 保存交付物选择
+                    deliverables: (function() {
+                        var checked = [];
+                        document.querySelectorAll('input[name="deliverableA"]:checked, input[name="deliverableB"]:checked').forEach(function(cb) {
+                            checked.push(cb.value);
+                        });
+                        return checked;
+                    })(),
+                    // 保存原材料计算方式
+                    materialSource: selectedMaterialSource || 'eu_default',
+                    // 保存当前方案路径
+                    finalPath: typeof finalPath !== 'undefined' ? finalPath : '',
                 };
                 localStorage.setItem("cbamProgress_" + urlCompany, JSON.stringify(data));
                 console.log(`[进度保存] 步骤${currentStep}, 手动工厂${factories.length}个, 批量导入${hasUploadData ? uploadedFactoryData.length + '个工厂' : '无'}`);
