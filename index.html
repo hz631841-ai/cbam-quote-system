@@ -1296,6 +1296,7 @@
         const urlPhone = urlParams.get('phone');  // 业务员手机号（用于钉钉@提醒）
 
         // ==== 【新增】状态持久化逻辑 - 加载进度 ====
+        var uploadedFactoryData = []; // 提前声明，避免 loadProgress 中访问时报错
         function loadProgress() {
             if (!urlCompany) return;
             const savedDataStr = localStorage.getItem("cbamProgress_" + urlCompany);
@@ -1683,7 +1684,7 @@
         });
 
         // 监听文件上传，解析Excel内容提取工厂和CN Code
-        let uploadedFactoryData = []; // 存储从Excel解析出的工厂数据
+        uploadedFactoryData = []; // 存储从Excel解析出的工厂数据（已在前面声明）
         document.getElementById('cnCodeFile').addEventListener('change', function (e) {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
