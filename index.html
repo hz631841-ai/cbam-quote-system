@@ -1321,7 +1321,7 @@
                     if (uploadTab) switchTab('upload', uploadTab);
                     // 显示解析结果
                     const totalFactories = uploadedFactoryData.length;
-                    const totalCodes = uploadedFactoryData.reduce((sum, f) => sum + (f.cnCodes ? f.cnCodes.length : 0), 0);
+                    const totalCodes = uploadedFactoryData.reduce((sum, f) => sum + (f.codes ? f.codes.length : 0), 0);
                     const resultDiv = document.getElementById('excelParseResult');
                     if (resultDiv) {
                         resultDiv.innerHTML = `<div style="color:#059669;font-weight:bold;">✅ 已恢复上次批量导入：${totalFactories}个工厂，${totalCodes}个CN Code</div>`;
@@ -2330,10 +2330,10 @@
                 for (let fi = 0; fi < filesToUpload.length; fi++) {
                     const item = filesToUpload[fi];
                     try {
-                        // 生成纯英文文件名
-                        const fileExt = item.file.name.split('.').pop() || 'xlsx';
+                        // 生成纯英文文件名（清理扩展名中的空格和特殊字符）
+                        const fileExt = (item.file.name.split('.').pop() || 'xlsx').trim().replace(/[^a-zA-Z0-9]/g, '');
                         const timestamp = Date.now();
-                        const safeName = `${refNumber}_file${fi + 1}_${timestamp}.${fileExt}`;
+                        const safeName = `${refNumber.trim()}_file${fi + 1}_${timestamp}.${fileExt}`;
                         const filePath = `cbam-uploads/${safeName}`;
 
                         console.log(`正在上传文件: ${item.label} (${item.file.name}) -> ${filePath}`);
@@ -2481,6 +2481,7 @@
         <div
             style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border-radius:16px; padding:32px; max-width:560px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
             <div style="font-size:20px; font-weight:700; color:#1e293b; margin-bottom:8px;">📊 原材料数据采用什么进行计算？</div>
+            <div style="background:#fef2f2; border:2px solid #dc2626; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:#dc2626; line-height:1.6; font-weight:600;">⚠️ 风险提示：选项2和选项3只是当前权宜之计，无法满足2027年及以后的核查要求。请提前规划后续工作，推动供应商开展实际计算工作！</div>
             <div style="font-size:13px; color:#64748b; margin-bottom:20px;">请选择前体材料（原材料）的排放数据来源，该选择将影响核算精度与报告结果。</div>
 
             <label class="radio-option"
